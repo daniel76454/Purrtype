@@ -8,12 +8,30 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;500;600;700&family=Atkinson+Hyperlegible+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+  <link id="styles" rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <!-- One persistent canvas: the cat room is the background of every screen. -->
   <canvas id="stage"></canvas>
   <div id="ui"></div>
-  <script type="module" src="dist/main.js"></script>
+  <script type="module">
+    // Each deploy publishes its code in its own folder (dist-<version>/), named in version.json,
+    // so a browser can never mix files from two versions. Running locally there is no
+    // version.json, and the game loads from dist/ as usual.
+    let base = './dist';
+    try {
+      const res = await fetch('version.json', { cache: 'no-store' });
+      if (res.ok) {
+        const { version } = await res.json();
+        if (/^[0-9a-f]{6,40}$/.test(version)) {
+          base = `./dist-${version}`;
+          document.getElementById('styles').href = `styles.css?v=${version}`;
+        }
+      }
+    } catch {
+      /* offline or local: use dist/ */
+    }
+    await import(`${base}/main.js`);
+  </script>
 </body>
 </html>

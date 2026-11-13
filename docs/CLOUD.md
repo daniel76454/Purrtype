@@ -11,6 +11,7 @@ Without a Firebase config the game works exactly the same, minus the sign-in but
 1. Push the repo to GitHub (default branch `main`).
 2. In the repo, open **Settings → Pages**, and under **Build and deployment → Source**, choose **GitHub Actions**.
 3. Every push to `main` now runs `.github/workflows/pages.yml`, which runs the tests, builds with `tsc`, and publishes `index.html`, `styles.css` and `dist/`.
+   Each deploy puts the code in its own folder (`dist-<commit>/`) and writes `version.json`; a small loader in `index.html` reads it without caching, so browsers never mix files from two versions after an update.
 
 The site will be at `https://<your-user>.github.io/<repo>/`.
 

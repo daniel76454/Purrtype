@@ -28,10 +28,17 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Collect the site
+        # The code goes in a folder named after this commit, and version.json says which one is
+        # current, so browsers never mix old and new files. dist/ stays for pages loaded before this.
         run: |
+          VERSION="${GITHUB_SHA::10}"
           mkdir _site
-          cp -r index.html styles.css dist _site/
-          find _site/dist -name '*.map' -delete
+          cp index.html styles.css _site/
+          cp -r dist "_site/dist-$VERSION"
+          cp -r dist _site/dist
+          echo "{\"version\": \"$VERSION\"}" > _site/version.json
+          find _site -name '*.map' -delete
+          cat _site/version.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
