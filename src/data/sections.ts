@@ -32,6 +32,14 @@ export interface LevelDef {
   grid: 1 | 2;
   /** Base "good" window in ms; tightened further by the grid (see judgeTiming). */
   windowMs: number;
+  /**
+   * 'letters' (default): every key is judged against the grid.
+   * 'words': letters are free and only the space after each word is judged; each word gets a
+   * number of grid slots based on its length at `wpm` (see src/game/chart.ts).
+   */
+  mode?: 'letters' | 'words';
+  /** Word mode: target typing speed in words per minute. */
+  wpm?: number;
   /** Characters this level is allowed to use (checked by `npm test`). */
   pool: string;
   lines: string[];
@@ -334,7 +342,7 @@ export const SECTIONS: SectionDef[] = [
   {
     id: 's4',
     name: 'Night Owl',
-    blurb: 'Two in the morning. Faster now, and a mystery toy.',
+    blurb: 'Word rhythm: type each word freely and land the space on the beat.',
     bpm: 105,
     music: { rootMidi: 55, scale: MINOR, progression: [0, 3, 4, 2], seed: 51 },
     theme: {
@@ -352,7 +360,9 @@ export const SECTIONS: SectionDef[] = [
         id: 's4l1',
         name: 'Wide Awake',
         grid: 1,
-        windowMs: 130,
+        windowMs: 150,
+        mode: 'words',
+        wpm: 25,
         pool: EVERYTHING,
         lines: [
           'Mochi wakes up. The clock says two.',
@@ -364,7 +374,9 @@ export const SECTIONS: SectionDef[] = [
         id: 's4l2',
         name: 'The Bell',
         grid: 1,
-        windowMs: 125,
+        windowMs: 145,
+        mode: 'words',
+        wpm: 28,
         pool: EVERYTHING,
         lines: [
           'She hops off the bed without a sound.',
@@ -375,8 +387,10 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's4l3',
         name: 'Tiptoe',
-        grid: 2,
-        windowMs: 110,
+        grid: 1,
+        windowMs: 135,
+        mode: 'words',
+        wpm: 32,
         pool: EVERYTHING,
         lines: [
           'She sniffs it once, then twice.',
@@ -387,8 +401,10 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's4l4',
         name: 'Rolling Away',
-        grid: 2,
-        windowMs: 105,
+        grid: 1,
+        windowMs: 130,
+        mode: 'words',
+        wpm: 35,
         pool: EVERYTHING,
         lines: [
           'The toy rolls away down the hall!',
@@ -399,8 +415,10 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's4l5',
         name: 'Kitchen Run',
-        grid: 2,
-        windowMs: 100,
+        grid: 1,
+        windowMs: 120,
+        mode: 'words',
+        wpm: 38,
         pool: EVERYTHING,
         lines: [
           'Into the kitchen, over the cold tiles.',
@@ -411,8 +429,10 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's4l6',
         name: 'Got It',
-        grid: 2,
-        windowMs: 95,
+        grid: 1,
+        windowMs: 110,
+        mode: 'words',
+        wpm: 42,
         pool: EVERYTHING,
         lines: [
           'Her paw finds it. Got it, at last!',
@@ -425,7 +445,7 @@ export const SECTIONS: SectionDef[] = [
   {
     id: 's5',
     name: 'Witching Hour',
-    blurb: 'Three o\'clock, a storm, and the fastest paws in town.',
+    blurb: 'Word rhythm at full speed. A storm, a moth, and the fastest paws in town.',
     bpm: 120,
     music: { rootMidi: 53, scale: MINOR, progression: [0, 5, 3, 4], seed: 67 },
     theme: {
@@ -445,6 +465,8 @@ export const SECTIONS: SectionDef[] = [
         name: 'Three O\'Clock',
         grid: 1,
         windowMs: 120,
+        mode: 'words',
+        wpm: 40,
         pool: EVERYTHING,
         lines: [
           'At three, the wind starts to howl.',
@@ -457,6 +479,8 @@ export const SECTIONS: SectionDef[] = [
         name: 'Shadows',
         grid: 1,
         windowMs: 110,
+        mode: 'words',
+        wpm: 45,
         pool: EVERYTHING,
         lines: [
           'A shadow moves across the wall.',
@@ -467,8 +491,10 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l3',
         name: 'Moth Chase',
-        grid: 2,
+        grid: 1,
         windowMs: 100,
+        mode: 'words',
+        wpm: 50,
         pool: EVERYTHING,
         lines: [
           'Up the shelf, past the books, she climbs.',
@@ -479,8 +505,10 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l4',
         name: 'Storm',
-        grid: 2,
-        windowMs: 90,
+        grid: 1,
+        windowMs: 95,
+        mode: 'words',
+        wpm: 55,
         pool: EVERYTHING,
         lines: [
           'Now the rain comes down in sheets.',
@@ -491,8 +519,10 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l5',
         name: 'Quiet Again',
-        grid: 2,
-        windowMs: 85,
+        grid: 1,
+        windowMs: 90,
+        mode: 'words',
+        wpm: 60,
         pool: EVERYTHING,
         lines: [
           'Slowly, the storm drifts out to sea.',
@@ -503,8 +533,10 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l6',
         name: 'First Light',
-        grid: 2,
-        windowMs: 80,
+        grid: 1,
+        windowMs: 85,
+        mode: 'words',
+        wpm: 65,
         pool: EVERYTHING,
         lines: [
           'The sky turns pink, then gold.',

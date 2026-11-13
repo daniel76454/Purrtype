@@ -3,7 +3,10 @@ import assert from 'node:assert/strict';
 import { SECTIONS } from '../dist/data/sections.js';
 import { judgeTiming } from '../dist/game/beat.js';
 import { TypingEngine } from '../dist/game/typing.js';
-import { GameSession, HEARTS, RECOVER_BASS, RECOVER_FULL } from '../dist/game/session.js';
+import { GameSession, HEARTS, RECOVER_BASS, RECOVER_FULL, COUNT_IN_BEATS } from '../dist/game/session.js';
+import { wordSlots, wordLengthAt } from '../dist/game/chart.js';
+import { mergeSaves } from '../dist/core/merge.js';
+import { defaultSave } from '../dist/core/storage.js';
 
 let passed = 0;
 const test = (name, fn) => {
@@ -205,6 +208,75 @@ test('session: audio offset shifts judging', () => {
   s.handleKey('a', 4.1); // 100ms late, compensated by the offset
   assert.equal(s.combo, 1);
   assert.equal(s.score, 100);
+});
+
+// ---- word mode -----------------------------------------------------------------------
+test('chart: longer words get more beats, every word gets at least one', () => {
+  // 60 wpm = 5 chars/s; at 60 bpm a beat is 1 s
+  assert.equal(wordSlots(5, 60, 60, 1), 1); // "four " = 1 s
+  assert.equal(wordSlots(10, 60, 60, 1), 2); // "something " = 2 s
+  assert.equal(wordSlots(2, 60, 60, 1), 1); // "a " is short but still gets a slot
+  assert.equal(wordLengthAt('she sniffs it ', 4), 7);
+});
+
+const wordLevel = (lines, wpm = 60) => ({ id: 'w', name: 'w', grid: 1, windowMs: 150, pool: '', lines, mode: 'words', wpm });
+
+test('word mode: letters are free, the space is judged when it is due', () => {
+  const s = new GameSession(wordLevel(['abcd efghi']), section, 0);
+  const typed = [];
+  s.on('typed', (e) => typed.push(e));
+  // "abcd " = 5 chars = 1 s = 1 beat at 60 bpm, so its space is due 1 beat after the count-in
+  assert.deepEqual(s.wordWindow, { from: COUNT_IN_BEATS, due: COUNT_IN_BEATS + 1 });
+  ['a', 'b', 'c', 'd'].forEach((k, i) => s.handleKey(k, 4.05 + i * 0.13)); // any timing
+  assert.ok(typed.every((e) => e.grade === 'free'));
+  assert.equal(s.combo, 0);
+  s.handleKey(' ', 5.02);
+  assert.equal(typed.at(-1).grade, 'perfect');
+  assert.equal(s.combo, 1);
+  assert.equal(s.score, 400, 'a word scores per letter');
+});
+
+test('word mode: a late space re-syncs the next word instead of snowballing', () => {
+  const s = new GameSession(wordLevel(['abcd efghi jk']), section, 0);
+  'abcd'.split('').forEach((k) => s.handleKey(k, 4.2));
+  s.handleKey(' ', 5.4); // 400 ms late: off
+  assert.equal(s.combo, 0);
+  // the next word starts from the slot nearest the actual press (beat 5); "efghi " = 6 chars -> 1 beat
+  assert.deepEqual(s.wordWindow, { from: 5, due: 6 });
+  'efghi'.split('').forEach((k) => s.handleKey(k, 5.5));
+  s.handleKey(' ', 6.0);
+  assert.equal(s.combo, 1, 'back on the beat after one slip');
+});
+
+// ---- cloud save merging -----------------------------------------------------------------
+test('mergeSaves: best progress per level, union of items, newest balance and settings', () => {
+  const base = defaultSave();
+  const local = {
+    ...base,
+    updatedAt: 100,
+    yarn: 50,
+    settings: { ...base.settings, music: 0.2, audioOffsetMs: 40 },
+    progress: { a: { stars: 3, bestScore: 900, bestCombo: 10 }, b: { stars: 1, bestScore: 100, bestCombo: 2 } },
+    owned: [...base.owned, 'hat.beanie'],
+  };
+  const remote = {
+    ...base,
+    updatedAt: 200,
+    yarn: 80,
+    settings: { ...base.settings, music: 0.9, audioOffsetMs: -30 },
+    progress: { a: { stars: 2, bestScore: 1200, bestCombo: 5 }, c: { stars: 2, bestScore: 300, bestCombo: 4 } },
+    owned: [...base.owned, 'toy.fish'],
+    equipped: { ...base.equipped, toy: 'toy.fish' },
+  };
+  const m = mergeSaves(local, remote);
+  assert.deepEqual(m.progress.a, { stars: 3, bestScore: 1200, bestCombo: 10 });
+  assert.ok(m.progress.b && m.progress.c);
+  assert.ok(m.owned.includes('hat.beanie') && m.owned.includes('toy.fish'));
+  assert.equal(m.yarn, 80, 'the newer save decides the balance');
+  assert.equal(m.settings.music, 0.9);
+  assert.equal(m.settings.audioOffsetMs, 40, 'audio offset stays with the device');
+  assert.equal(m.equipped.toy, 'toy.fish');
+  assert.equal(m.updatedAt, 200);
 });
 
 console.log(`\n${passed} tests passed`);

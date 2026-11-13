@@ -1,6 +1,7 @@
 import { h } from '../core/dom.js';
 import { store } from '../core/storage.js';
 import { sfx } from '../audio/sfx.js';
+import { cloud } from '../cloud/cloud.js';
 
 export function button(label: string, onClick: () => void, cls = ''): HTMLButtonElement {
   return h('button', {
@@ -60,4 +61,28 @@ export function toggle(label: string, value: boolean, onChange: (v: boolean) => 
   input.checked = value;
   input.addEventListener('change', () => onChange(input.checked));
   return h('label', { class: 'row' }, h('span', { class: 'label', text: label }), input);
+}
+
+/** Google sign-in / sync status. Renders nothing when the cloud isn't configured. */
+export function accountChip(): HTMLElement | null {
+  if (!cloud.enabled) return null;
+  const el = h('div', { class: 'chip account' });
+  const render = () => {
+    if (!el.isConnected && el.dataset.mounted) return off();
+    el.dataset.mounted = '1';
+    const u = cloud.user;
+    const status: Record<string, string> = { syncing: 'syncing…', synced: 'synced', error: 'sync error', loading: '…' };
+    if (cloud.status === 'loading') el.replaceChildren(h('span', { class: 'dim', text: 'cloud…' }));
+    else if (!u) el.replaceChildren(button('Sign in with Google', () => void cloud.signIn(), 'small'));
+    else
+      el.replaceChildren(
+        h('span', { class: 'cloud-dot ' + cloud.status, attrs: { title: cloud.status === 'error' ? cloud.lastError : 'progress is saved to your account' } }),
+        h('span', { text: u.name }),
+        h('span', { class: 'dim', text: status[cloud.status] ?? '' }),
+        button('sign out', () => void cloud.signOut(), 'ghost small'),
+      );
+  };
+  const off = cloud.on('change', render);
+  render();
+  return el;
 }

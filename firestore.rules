@@ -1,0 +1,34 @@
+rules_version = '2';
+
+// Security rules for Purrtype's Firestore database.
+// Paste these into Firebase console → Firestore Database → Rules, then Publish.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each player's save: only they can read or write it.
+    match /saves/{uid} {
+      allow read, delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['data', 'updatedAt'])
+        && request.resource.data.data is string
+        && request.resource.data.data.size() < 100000;
+    }
+
+    // Leaderboards: anyone can read; a signed-in player can only write their own entry,
+    // with sane values. (Scores are reported by the browser, so a determined cheater could still
+    // post a fake one within the limits. Fine for a cozy game; delete entries by hand if needed.)
+    match /leaderboards/{levelId}/scores/{uid} {
+      allow read: if true;
+      allow create, update: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['name', 'score', 'combo', 'at'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0 && request.resource.data.name.size() <= 20
+        && request.resource.data.score is int
+        && request.resource.data.score > 0 && request.resource.data.score <= 250000
+        && request.resource.data.combo is int
+        && request.resource.data.combo >= 0 && request.resource.data.combo <= 2000
+        && request.resource.data.at == request.time;
+      allow delete: if false;
+    }
+  }
+}

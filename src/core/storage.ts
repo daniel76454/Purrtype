@@ -6,6 +6,7 @@ const KEY = 'purrtype.save';
 export function defaultSave(): SaveData {
   return {
     version: 1,
+    updatedAt: 0,
     settings: {
       master: 0.8,
       music: 0.8,
@@ -57,6 +58,17 @@ class Store extends Emitter<{ change: void }> {
   }
 
   save(): void {
+    this.data.updatedAt = Date.now();
+    this.write();
+  }
+
+  /** Replace the save (e.g. after merging with the cloud copy) without bumping its timestamp. */
+  replace(data: SaveData): void {
+    this.data = data;
+    this.write();
+  }
+
+  private write(): void {
     try {
       localStorage.setItem(KEY, JSON.stringify(this.data));
     } catch {

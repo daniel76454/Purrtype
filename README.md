@@ -17,6 +17,10 @@ ES modules need a web server, so opening `index.html` straight from disk won't w
 Useful URL flag: `?dev=1` unlocks every level.
 In the browser console, `purrtype.nav`, `purrtype.scene` and `purrtype.store` are exposed for poking at things.
 
+## Publish and cloud saves
+
+See **[docs/CLOUD.md](docs/CLOUD.md)** for GitHub Pages deployment (a workflow is included) and optional Google sign-in with Firebase.
+
 ## Test
 
 ```bash

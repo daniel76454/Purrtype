@@ -1,7 +1,7 @@
 import { h } from '../core/dom.js';
 import type { Navigator, Screen } from '../core/screens.js';
 import { audio } from '../audio/engine.js';
-import { button, yarnChip } from './ui.js';
+import { accountChip, button, yarnChip } from './ui.js';
 import { LevelSelectScreen } from './levels.js';
 import { ShopScreen } from './shop.js';
 import { SettingsScreen } from './settings.js';
@@ -19,7 +19,7 @@ export class MenuScreen implements Screen {
       h(
         'div',
         { class: 'screen left menu' },
-        h('div', { class: 'top-right' }, yarnChip()),
+        h('div', { class: 'top-right' }, accountChip(), yarnChip()),
         h('div', { class: 'title' }, h('h1', { text: 'Purrtype' }), h('p', { text: 'late-night beats to type to' })),
         h(
           'div',

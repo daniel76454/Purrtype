@@ -1,7 +1,8 @@
 import { Emitter } from '../core/events.js';
 import type { Grade, Layer } from '../core/types.js';
 import type { LevelDef, SectionDef } from '../data/sections.js';
-import { judgeTiming } from './beat.js';
+import { judgeTiming, timingWindows } from './beat.js';
+import { wordLengthAt, wordSlots } from './chart.js';
 import { TypingEngine, type KeyOutcome } from './typing.js';
 
 // ---- Tunables ---------------------------------------------------------------
@@ -33,8 +34,11 @@ export interface LevelResult {
 }
 
 export interface SessionEvents {
-  /** `slot` is the judged grid slot (null when the key was not timed). */
-  typed: { outcome: KeyOutcome; grade: Grade | 'skipped' | null; points: number; deltaMs: number; slot: number | null };
+  /**
+   * `grade` is null for a wrong key, 'skipped' inside a missed word, and 'free' for an untimed
+   * letter in word mode. `slot` is the judged grid slot (null when the key was not timed).
+   */
+  typed: { outcome: KeyOutcome; grade: Grade | 'skipped' | 'free' | null; points: number; deltaMs: number; slot: number | null };
   combo: { combo: number; multiplier: number };
   miss: { hearts: number };
   /** Music layer targets changed. `fast` = drop quickly (a miss), otherwise ease back in. */
@@ -54,6 +58,9 @@ export class GameSession extends Emitter<SessionEvents> {
   over = false;
   private counts = { perfect: 0, good: 0, off: 0 };
   private wordsMissed = 0;
+  /** Word mode: the grid slot the current word started from, and the slot its space is due on. */
+  anchorSlot = 0;
+  dueSlot = 0;
 
   /**
    * @param startTime audio-clock time of beat 0 (the grid origin)
@@ -67,6 +74,32 @@ export class GameSession extends Emitter<SessionEvents> {
   ) {
     super();
     this.engine = new TypingEngine(level.lines);
+    if (this.wordMode) {
+      this.anchorSlot = COUNT_IN_BEATS * level.grid;
+      this.dueSlot = this.anchorSlot + this.slotsForWordAt(0, 0);
+    }
+  }
+
+  /** Word mode: only the space after each word is timed (see chart.ts). */
+  get wordMode(): boolean {
+    return this.level.mode === 'words';
+  }
+
+  /** Word mode: the beat the current word started from and the beat its space is due on. */
+  get wordWindow(): { from: number; due: number } {
+    return { from: this.anchorSlot / this.level.grid, due: this.dueSlot / this.level.grid };
+  }
+
+  private slotsForWordAt(line: number, index: number): number {
+    const text = this.engine.lines[line] ?? '';
+    return wordSlots(wordLengthAt(text, index), this.level.wpm ?? 30, this.section.bpm, this.level.grid);
+  }
+
+  /** Word mode: start the next word's timer from the slot nearest to when this space was pressed. */
+  private resync(t: number): void {
+    const interval = 60 / this.section.bpm / this.level.grid;
+    this.anchorSlot = Math.round((t - this.startTime) / interval);
+    if (!this.engine.finished) this.dueSlot = this.anchorSlot + this.slotsForWordAt(this.engine.line, this.engine.index);
   }
 
   get multiplier(): number {
@@ -102,8 +135,27 @@ export class GameSession extends Emitter<SessionEvents> {
       return;
     }
 
+    const t = audioTime - this.offsetSec;
     if (outcome.inMissedWord) {
       this.emit('typed', { outcome, grade: 'skipped', points: 0, deltaMs: 0, slot: null });
+      if (this.wordMode && outcome.wordDone) this.resync(t);
+    } else if (this.wordMode && !outcome.wordDone) {
+      this.emit('typed', { outcome, grade: 'free', points: 0, deltaMs: 0, slot: null });
+    } else if (this.wordMode) {
+      // the space: judge it against when it was due, scored by the length of the word
+      const { interval, goodMs, perfectMs } = timingWindows(this.section.bpm, this.level.grid, this.level.windowMs);
+      const deltaMs = (t - (this.startTime + this.dueSlot * interval)) * 1000;
+      const a = Math.abs(deltaMs);
+      const grade: Grade = a <= perfectMs ? 'perfect' : a <= goodMs ? 'good' : 'off';
+      const letters = Math.max(1, outcome.index - this.wordStart(outcome.line, outcome.index));
+      this.counts[grade]++;
+      const onBeat = grade !== 'off';
+      const points = Math.round(BASE_POINTS[grade] * letters * (onBeat ? this.multiplier : 1));
+      this.score += points;
+      if (onBeat) this.registerOnBeat();
+      const slot = this.dueSlot;
+      this.resync(t);
+      this.emit('typed', { outcome, grade, points, deltaMs, slot });
     } else {
       const j = judgeTiming(audioTime - this.offsetSec, this.startTime, this.section.bpm, this.level.grid, this.level.windowMs);
       this.counts[j.grade]++;
@@ -115,6 +167,13 @@ export class GameSession extends Emitter<SessionEvents> {
     }
 
     if (outcome.finished) this.finish(true);
+  }
+
+  /** Index of the first letter of the word whose space is at `spaceIndex`. */
+  private wordStart(line: number, spaceIndex: number): number {
+    const text = this.engine.lines[line] ?? '';
+    const prev = text.lastIndexOf(' ', spaceIndex - 1);
+    return prev + 1;
   }
 
   private registerOnBeat(): void {

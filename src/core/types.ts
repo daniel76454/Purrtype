@@ -24,6 +24,8 @@ export interface LevelProgress {
 
 export interface SaveData {
   version: number;
+  /** ms since epoch of the last local change; decides which device wins for yarn, outfit and settings. */
+  updatedAt: number;
   settings: Settings;
   yarn: number;
   progress: Record<string, LevelProgress>;

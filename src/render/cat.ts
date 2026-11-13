@@ -486,7 +486,7 @@ export class CatScene {
   heartsFrac = 1;
   recovering = false;
   reducedMotion = false;
-  /** Where the cat lives on screen: 'right' leaves room for a left-hand menu panel. */
+  /** Where the cat lives on screen: 'right' leaves room for a left-hand menu panel; 'center' (play) raises the floor for the typing panel. */
   layout: 'center' | 'right' = 'right';
   /** Return the current fractional beat. When null the scene runs on its own idle clock. */
   beatSource: (() => number) | null = null;
@@ -644,7 +644,9 @@ export class CatScene {
 
   private place(): void {
     const { lw, lh } = this;
-    this.floorY = Math.round(lh * 0.8);
+    this.placedLayout = this.layout;
+    // In play the floor is raised so the typing panel can sit on it below the cat.
+    this.floorY = Math.round(lh * (this.layout === 'center' ? 0.6 : 0.8));
     this.footY = this.floorY + 6;
     this.homeX = Math.round(clamp(lw * (this.layout === 'right' ? 0.6 : 0.42), 40, Math.max(40, lw - 90)));
     if (!this.cat.placed) {
@@ -661,7 +663,10 @@ export class CatScene {
   }
 
   // ---- simulation ----------------------------------------------------------
+  private placedLayout = '';
+
   private update(dt: number): void {
+    if (this.layout !== this.placedLayout) this.place();
     this.clock += dt;
     this.beat = this.beatSource ? this.beatSource() : (this.clock * this.bpm) / 60;
     const toy = this.toy;

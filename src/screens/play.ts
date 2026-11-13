@@ -10,10 +10,11 @@ import { COUNT_IN_BEATS, GameSession, HEARTS, type LevelResult } from '../game/s
 import { TimingSlider } from '../render/slider.js';
 import { timingWindows } from '../game/beat.js';
 import { button, icon, starRow } from './ui.js';
+import { cloud } from '../cloud/cloud.js';
 import { LevelSelectScreen } from './levels.js';
 
 type State = 'loading' | 'countin' | 'playing' | 'paused' | 'done';
-type CharClass = 'pending' | Grade | 'skipped';
+type CharClass = 'pending' | Grade | 'skipped' | 'free';
 
 const GLYPHS: Record<string, string> = { '.': 'dot', ',': 'comma' };
 
@@ -46,6 +47,8 @@ export class PlayScreen implements Screen {
   private multEl!: HTMLElement;
   private slider!: TimingSlider;
   private guideOn = true;
+  /** Scoring windows in beats (for the word-mode slider). */
+  private windowBeats = { good: 0, perfect: 0 };
   private cursorEl: HTMLElement | null = null;
   /** Latency compensation in beats: visuals follow what the player hears, minus their offset. */
   private offsetBeats = 0;
@@ -92,16 +95,20 @@ export class PlayScreen implements Screen {
     this.banner = h('div', { class: 'banner', text: '' });
     const win = timingWindows(this.section.bpm, this.level.grid, this.level.windowMs);
     const slotMs = win.interval * 1000;
-    this.slider = new TimingSlider(this.level.grid, win.goodMs / slotMs, win.perfectMs / slotMs);
+    this.slider = new TimingSlider(this.level.grid, win.goodMs / slotMs, win.perfectMs / slotMs, this.level.mode === 'words');
+    const spb = 60 / this.section.bpm;
+    this.windowBeats = { good: win.goodMs / 1000 / spb, perfect: win.perfectMs / 1000 / spb };
     this.guideOn = store.data.settings.beatGuide;
     if (!this.guideOn) this.slider.el.classList.add('hidden');
-    const first = /l[15]$/.test(this.level.id); // first level, and first double-time level
-    const hint = first
-      ? h('div', {
-          class: 'type-hint',
-          text: this.level.grid === 2 ? 'double time: a letter each time the knob reaches an end' : 'type a letter each time the knob reaches an end · finish every word with space',
-        })
-      : null;
+    const words = this.level.mode === 'words';
+    // hints on the first level of a section, and on the first double-time level
+    const first = /l1$/.test(this.level.id) || (!words && /l5$/.test(this.level.id));
+    const hintText = words
+      ? `word rhythm: type each word freely, land the space as the knob reaches the line · ${this.level.wpm} wpm`
+      : this.level.grid === 2
+        ? 'double time: a letter each time the knob reaches an end'
+        : 'type a letter each time the knob reaches an end · finish every word with space';
+    const hint = first ? h('div', { class: 'type-hint', text: hintText }) : null;
 
     this.panel = h('div', { class: 'typing panel' }, this.slider.el, this.curLine, this.nextLine, hint);
     root.append(
@@ -116,7 +123,7 @@ export class PlayScreen implements Screen {
           h('div', { class: 'stats' }, this.scoreEl),
         ),
         h('div', { class: 'combo' }, this.comboEl, h('div', { class: 'combo-label', text: 'combo' }), this.multEl),
-        h('div', { class: 'center' }, this.banner, this.panel, this.feedback),
+        h('div', { class: 'center' }, this.banner, this.feedback, this.panel),
       ),
     );
   }
@@ -153,8 +160,13 @@ export class PlayScreen implements Screen {
           return;
         }
         if (outcome.kind !== 'correct' || grade === null) return;
-        this.grades[outcome.line]![outcome.index] = grade;
-        if (grade !== 'skipped') {
+        const row = this.grades[outcome.line]!;
+        row[outcome.index] = grade;
+        // word mode: the space's grade colours the whole word
+        if (s.wordMode && outcome.wordDone && grade !== 'skipped') {
+          for (let i = outcome.index - 1; i >= 0 && row[i] === 'free'; i--) row[i] = grade;
+        }
+        if (grade !== 'skipped' && grade !== 'free') {
           sfx.hit(grade, s.combo);
           scene.hit(grade);
           const side = deltaMs < 0 ? 'early' : 'late';
@@ -215,15 +227,24 @@ export class PlayScreen implements Screen {
 
   /** Draw the timing slider and keep it hovering over the cursor letter. Also flash the cursor on each slot. */
   private drawSlider(vb: number): void {
-    this.slider.draw(vb);
+    const s = this.session;
+    let flash: boolean;
+    if (s.wordMode) {
+      const { from, due } = s.wordWindow;
+      this.slider.drawProgress(vb, from, due, this.windowBeats.good, this.windowBeats.perfect);
+      flash = vb >= 0 && Math.abs(vb - due) < 0.08;
+    } else {
+      this.slider.draw(vb);
+      const g = this.level.grid;
+      const p = vb * g - Math.floor(vb * g);
+      flash = vb >= 0 && (p < 0.1 || p > 0.94);
+    }
     const el = this.cursorEl;
     if (!el) return;
     const m = this.slider.el;
     const x = el.offsetLeft - m.offsetLeft + el.offsetWidth / 2 - m.offsetWidth / 2;
-    this.slider.el.style.transform = `translateX(${Math.round(x)}px)`;
-    const g = this.level.grid;
-    const p = vb * g - Math.floor(vb * g);
-    el.classList.toggle('flash', vb >= 0 && (p < 0.1 || p > 0.94));
+    m.style.transform = `translateX(${Math.round(x)}px)`;
+    el.classList.toggle('flash', flash);
   }
 
   // ---- input ---------------------------------------------------------------
@@ -354,9 +375,36 @@ export class PlayScreen implements Screen {
             stat('Hearts left', r.heartsLeft),
             h('div', { class: 'stat' }, h('span', { text: 'Yarn earned' }), h('b', {}, icon('yarn'), ` ${r.yarn}`)),
           ),
+          this.leaderboard(r),
           h('div', { class: 'row-buttons' }, ...buttons),
         ),
       ),
     );
+  }
+
+  /** Top scores for this level (only when the cloud is configured). Posts your score if signed in. */
+  private leaderboard(r: LevelResult): HTMLElement | null {
+    if (!cloud.enabled) return null;
+    const list = h('ol', { class: 'board-list' }, h('li', { class: 'dim', text: 'loading…' }));
+    const foot = h('div', { class: 'board-foot' });
+    const load = async () => {
+      if (r.completed && cloud.user) await cloud.submitScore(r.levelId, r.score, r.maxCombo);
+      const top = await cloud.topScores(r.levelId, 5);
+      list.replaceChildren(
+        ...(top.length
+          ? top.map((e) => h('li', { class: e.uid === cloud.user?.uid ? 'me' : '' }, h('span', { text: e.name }), h('b', { text: String(e.score) })))
+          : [h('li', { class: 'dim', text: 'no scores yet' })]),
+      );
+      foot.replaceChildren();
+      if (!cloud.user)
+        foot.append(
+          button('Sign in to post your score', async () => {
+            await cloud.signIn();
+            if (cloud.user) void load();
+          }, 'small'),
+        );
+    };
+    void load();
+    return h('div', { class: 'board' }, h('h3', { text: 'Leaderboard' }), list, foot);
   }
 }
