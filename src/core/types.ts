@@ -14,12 +14,19 @@ export interface Settings {
   beatGuide: boolean; // visual beat pips in the typing panel
   reducedMotion: boolean;
   audioOffsetMs: number; // latency compensation, positive = player hears late
+  /** On-screen keyboard with finger hints: 'auto' shows it in the Home Row section only. */
+  keyboardGuide: 'auto' | 'on' | 'off';
+  /** Name shown on leaderboards (chosen by the player; never taken from their Google account). */
+  playerName: string;
 }
 
 export interface LevelProgress {
   stars: number;
   bestScore: number;
   bestCombo: number;
+  /** Practice mode only. */
+  bestWpm?: number;
+  bestAccuracy?: number;
 }
 
 export interface SaveData {

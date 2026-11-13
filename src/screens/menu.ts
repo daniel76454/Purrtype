@@ -5,6 +5,7 @@ import { accountChip, button, yarnChip } from './ui.js';
 import { LevelSelectScreen } from './levels.js';
 import { ShopScreen } from './shop.js';
 import { SettingsScreen } from './settings.js';
+import { PracticeScreen } from './practice.js';
 
 export class MenuScreen implements Screen {
   constructor(private nav: Navigator) {}
@@ -25,6 +26,7 @@ export class MenuScreen implements Screen {
           'div',
           { class: 'stack' },
           button('Play', unlock(() => this.nav.go(new LevelSelectScreen(this.nav))), 'primary big'),
+          button('Practice', unlock(() => this.nav.go(new PracticeScreen(this.nav))), 'big'),
           button('Shop', unlock(() => this.nav.go(new ShopScreen(this.nav))), 'big'),
           button('Settings', unlock(() => this.nav.go(new SettingsScreen(this.nav))), 'big'),
         ),

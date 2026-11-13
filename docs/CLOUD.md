@@ -44,7 +44,7 @@ The site will be at `https://<your-user>.github.io/<repo>/`.
   - yarn, outfit and settings from whichever save changed most recently.
   - The audio offset never syncs, because it depends on each device's speakers or headphones.
 - **While signed in:** every change is uploaded about 1.5 seconds after it happens.
-- **Leaderboards:** finishing a level posts your score if it beats your previous best. Only your Google first name is shown.
+- **Leaderboards:** finishing a level posts your score if it beats your previous best. Only a nickname the player chooses in Settings is shown (a random cozy one by default); nothing from the Google account is ever displayed or stored.
 
 Firestore layout:
 

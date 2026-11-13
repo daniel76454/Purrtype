@@ -3,6 +3,7 @@ import { mergeSaves, sameSave } from '../core/merge.js';
 import { store } from '../core/storage.js';
 import type { SaveData } from '../core/types.js';
 import { FIREBASE_CONFIG, FIREBASE_SDK } from './config.js';
+import { cleanNickname, randomNickname } from '../core/names.js';
 
 export type CloudStatus = 'off' | 'loading' | 'signed-out' | 'syncing' | 'synced' | 'error';
 
@@ -27,7 +28,8 @@ const PUSH_DELAY_MS = 1500;
  */
 class Cloud extends Emitter<{ change: void }> {
   status: CloudStatus = FIREBASE_CONFIG ? 'loading' : 'off';
-  user: { uid: string; name: string } | null = null;
+  /** Only the uid is kept; nothing else from the Google account is stored or shown. */
+  user: { uid: string } | null = null;
   lastError = '';
 
   private fb: any = null; // { auth, db, authMod, fsMod }
@@ -71,6 +73,37 @@ class Cloud extends Emitter<{ change: void }> {
     await this.fb.authMod.signOut(this.fb.auth);
   }
 
+  /** The player's leaderboard nickname, picking a random one the first time. */
+  get nickname(): string {
+    let n = cleanNickname(store.data.settings.playerName);
+    if (!n) {
+      n = randomNickname();
+      store.update((d) => (d.settings.playerName = n));
+    }
+    return n;
+  }
+
+  /** After a nickname change, update the name on every leaderboard entry this player has. */
+  async renameEntries(): Promise<void> {
+    if (!this.fb || !this.user) return;
+    const { fsMod, db } = this.fb;
+    const name = this.nickname;
+    const ids = [...Object.keys(store.data.progress)];
+    await Promise.all(
+      ids.map(async (id) => {
+        const ref = fsMod.doc(db, 'leaderboards', id, 'scores', this.user!.uid);
+        try {
+          const snap = await fsMod.getDoc(ref);
+          if (!snap.exists() || snap.data().name === name) return;
+          const d = snap.data();
+          await fsMod.setDoc(ref, { name, score: d.score, combo: d.combo, at: fsMod.serverTimestamp() });
+        } catch (e) {
+          this.fail(e);
+        }
+      }),
+    );
+  }
+
   /** Post a score if it beats this player's best on the level. */
   async submitScore(levelId: string, score: number, combo: number): Promise<void> {
     if (!this.fb || !this.user || score <= 0) return;
@@ -79,7 +112,7 @@ class Cloud extends Emitter<{ change: void }> {
     try {
       const prev = await fsMod.getDoc(ref);
       if (prev.exists() && (prev.data().score ?? 0) >= score) return;
-      await fsMod.setDoc(ref, { name: this.user.name, score: Math.round(score), combo: Math.round(combo), at: fsMod.serverTimestamp() });
+      await fsMod.setDoc(ref, { name: this.nickname, score: Math.round(score), combo: Math.round(combo), at: fsMod.serverTimestamp() });
     } catch (e) {
       this.fail(e);
     }
@@ -105,10 +138,10 @@ class Cloud extends Emitter<{ change: void }> {
       this.set('signed-out');
       return;
     }
-    // leaderboards show only a first name
-    const first = String(u.displayName ?? 'Player').trim().split(/\s+/)[0] || 'Player';
-    this.user = { uid: u.uid, name: first.slice(0, 20) };
+    this.user = { uid: u.uid };
     await this.pull();
+    // entries posted before nicknames existed carried the Google first name: replace it
+    void this.renameEntries();
   }
 
   /** Fetch the cloud save, merge it with this device's, and push the result back. */

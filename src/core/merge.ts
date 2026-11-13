@@ -15,9 +15,14 @@ export function mergeSaves(local: SaveData, remote: SaveData): SaveData {
   const progress: Record<string, LevelProgress> = { ...remote.progress };
   for (const [id, p] of Object.entries(local.progress)) {
     const r = progress[id];
-    progress[id] = r
-      ? { stars: Math.max(p.stars, r.stars), bestScore: Math.max(p.bestScore, r.bestScore), bestCombo: Math.max(p.bestCombo, r.bestCombo) }
-      : { ...p };
+    if (!r) {
+      progress[id] = { ...p };
+      continue;
+    }
+    const best: LevelProgress = { stars: Math.max(p.stars, r.stars), bestScore: Math.max(p.bestScore, r.bestScore), bestCombo: Math.max(p.bestCombo, r.bestCombo) };
+    if (p.bestWpm !== undefined || r.bestWpm !== undefined) best.bestWpm = Math.max(p.bestWpm ?? 0, r.bestWpm ?? 0);
+    if (p.bestAccuracy !== undefined || r.bestAccuracy !== undefined) best.bestAccuracy = Math.max(p.bestAccuracy ?? 0, r.bestAccuracy ?? 0);
+    progress[id] = best;
   }
 
   const owned = Array.from(new Set([...local.owned, ...remote.owned]));

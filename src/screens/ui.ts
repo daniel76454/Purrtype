@@ -77,7 +77,7 @@ export function accountChip(): HTMLElement | null {
     else
       el.replaceChildren(
         h('span', { class: 'cloud-dot ' + cloud.status, attrs: { title: cloud.status === 'error' ? cloud.lastError : 'progress is saved to your account' } }),
-        h('span', { text: u.name }),
+        h('span', { text: cloud.nickname }),
         h('span', { class: 'dim', text: status[cloud.status] ?? '' }),
         button('sign out', () => void cloud.signOut(), 'ghost small'),
       );
@@ -85,4 +85,37 @@ export function accountChip(): HTMLElement | null {
   const off = cloud.on('change', render);
   render();
   return el;
+}
+
+/**
+ * Top 5 scores for a level (only when the cloud is configured).
+ * Posts `score` first if the player is signed in and it beats their best (0 = don't post).
+ */
+export function leaderboardBox(levelId: string, score: number, combo: number): HTMLElement | null {
+  if (!cloud.enabled) return null;
+  const list = h('ol', { class: 'board-list' }, h('li', { class: 'dim', text: 'loading…' }));
+  const foot = h('div', { class: 'board-foot' });
+  const load = async () => {
+    if (score > 0 && cloud.user) await cloud.submitScore(levelId, score, combo);
+    const top = await cloud.topScores(levelId, 5);
+    list.replaceChildren(
+      ...(top.length
+        ? top.map((e) => h('li', { class: e.uid === cloud.user?.uid ? 'me' : '' }, h('span', { text: e.name }), h('b', { text: String(e.score) })))
+        : [h('li', { class: 'dim', text: 'no scores yet' })]),
+    );
+    foot.replaceChildren();
+    if (!cloud.user && score > 0)
+      foot.append(
+        button(
+          'Sign in to post your score',
+          async () => {
+            await cloud.signIn();
+            if (cloud.user) void load();
+          },
+          'small',
+        ),
+      );
+  };
+  void load();
+  return h('div', { class: 'board' }, h('h3', { text: 'Leaderboard' }), list, foot);
 }

@@ -44,24 +44,32 @@ class AudioEngine {
     this.sfxBus.gain.setTargetAtTime(s.sfx ** 2, t, 0.02);
   }
 
-  /** The audio-clock time the player is hearing *right now* (accounts for output latency where supported). */
-  heardTime(): number {
-    // The output timestamp only updates every audio callback, so extrapolate to "now" the same
-    // way keyTimeToCtx does; otherwise visuals lag the judge by up to one callback.
-    const ts = this.ctx.getOutputTimestamp?.();
-    if (ts && ts.contextTime && ts.performanceTime && this.ctx.state === 'running') {
-      return ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+  /**
+   * The audio-clock time the player hears at performance time `perfMs`.
+   * Both the visuals (heardTime) and the judge (keyTimeToCtx) go through this one function, so
+   * they can never disagree. Any remaining device latency is covered by the calibrated offset.
+   */
+  private heardAt(perfMs: number): number {
+    const c = this.ctx;
+    if (c.state !== 'running') return c.currentTime;
+    const ts = c.getOutputTimestamp?.();
+    if (ts && ts.contextTime && ts.performanceTime) {
+      // the output timestamp only updates every audio callback, so extrapolate from it
+      return ts.contextTime + (perfMs - ts.performanceTime) / 1000;
     }
-    return ts && ts.contextTime ? ts.contextTime : this.ctx.currentTime;
+    // no output timestamp (older browsers): what's rendered now minus the reported latency
+    const latency = (c.outputLatency || 0) + (c.baseLatency || 0);
+    return c.currentTime - latency + (perfMs - performance.now()) / 1000;
   }
 
-  /** Convert a keyboard event's timestamp to audio-clock time. */
+  /** The audio-clock time the player is hearing right now. */
+  heardTime(): number {
+    return this.heardAt(performance.now());
+  }
+
+  /** Convert a keyboard event's timestamp to the audio-clock time the player was hearing. */
   keyTimeToCtx(ev: KeyboardEvent): number {
-    const ts = this.ctx.getOutputTimestamp?.();
-    if (ts && ts.contextTime && ts.performanceTime) {
-      return ts.contextTime + (ev.timeStamp - ts.performanceTime) / 1000;
-    }
-    return this.ctx.currentTime;
+    return this.heardAt(ev.timeStamp);
   }
 }
 

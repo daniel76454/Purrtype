@@ -34,9 +34,8 @@ export class TimingSlider {
     private grid: number,
     goodFrac: number,
     perfectFrac: number,
-    wide = false,
   ) {
-    this.w = wide ? 47 : 31;
+    this.w = 31;
     this.r = this.w - 4; // right end of the track
     this.el = document.createElement('canvas');
     this.el.className = 'slider';
@@ -90,41 +89,6 @@ export class TimingSlider {
     this.knob(x, hot);
   }
 
-  /**
-   * Word mode: the knob travels from the left at `from` and reaches the target line exactly at
-   * `due` (when the space should be pressed), then keeps going into the late zone.
-   * The zones around the target are the scoring windows.
-   */
-  drawProgress(beat: number, from: number, due: number, goodBeats: number, perfectBeats: number): void {
-    const c = this.c;
-    c.clearRect(0, 0, this.w, H);
-    const mid = H >> 1;
-    const T = this.r - 5; // target line
-    const span = Math.max(0.01, due - from);
-    const toX = (b: number) => L + ((b - from) / span) * (T - L);
-    const x = Math.round(clamp(toX(beat), L, this.r + 1));
-    const g = Math.max(1, Math.round((goodBeats / span) * (T - L)));
-    const p = Math.max(1, Math.round((perfectBeats / span) * (T - L)));
-    const hot = beat >= from && Math.abs(beat - due) <= perfectBeats;
-
-    c.fillStyle = COL.edge;
-    c.fillRect(L - 2, mid - 2, this.r - L + 5, 5);
-    c.fillStyle = COL.track;
-    c.fillRect(L - 1, mid - 1, this.r - L + 3, 3);
-    // progress trail
-    c.fillStyle = '#4a4080';
-    c.fillRect(L - 1, mid - 1, Math.max(0, x - L + 1), 3);
-    // windows around the target
-    c.fillStyle = COL.good;
-    c.fillRect(T - g, mid - 1, g * 2 + 1, 3);
-    c.fillStyle = COL.perfect;
-    c.fillRect(T - p, mid - 1, p * 2 + 1, 3);
-    c.fillStyle = hot ? COL.hot : COL.knob;
-    c.fillRect(T, mid - 4, 1, 9);
-
-    this.knob(x, hot);
-  }
-
   private knob(x: number, hot: boolean): void {
     const c = this.c;
     c.fillStyle = COL.edge;
@@ -134,4 +98,3 @@ export class TimingSlider {
   }
 }
 
-const clamp = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));

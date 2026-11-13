@@ -35,7 +35,7 @@ export class LevelSelectScreen implements Screen {
           open ? h('span', { class: 'num', text: String(i + 1) }) : h('span', { class: 'num' }, icon('lock')),
           h('span', { class: 'name', text: level.name }),
           starRow(p?.stars ?? 0),
-          h('span', { class: 'best', text: p ? `best ${p.bestScore}` : level.mode === 'words' ? `${level.wpm} wpm` : level.grid === 2 ? 'double time' : '' }),
+          h('span', { class: 'best', text: p ? `best ${p.bestScore}` : level.grid === 2 ? 'double time' : '' }),
         );
         return card;
       });

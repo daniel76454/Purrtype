@@ -15,6 +15,8 @@ export function defaultSave(): SaveData {
       beatGuide: true,
       reducedMotion: false,
       audioOffsetMs: 0,
+      keyboardGuide: 'auto',
+      playerName: '',
     },
     yarn: 0,
     progress: {},

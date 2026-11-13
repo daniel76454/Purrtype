@@ -488,6 +488,8 @@ export class CatScene {
   reducedMotion = false;
   /** Where the cat lives on screen: 'right' leaves room for a left-hand menu panel; 'center' (play) raises the floor for the typing panel. */
   layout: 'center' | 'right' = 'right';
+  /** Play layout only: where the floor sits, as a share of the height (higher when the panel is taller). */
+  floorFrac = 0.6;
   /** Return the current fractional beat. When null the scene runs on its own idle clock. */
   beatSource: (() => number) | null = null;
 
@@ -578,6 +580,7 @@ export class CatScene {
     this.heartsFrac = 1;
     this.recovering = false;
     this.layout = 'right';
+    this.floorFrac = 0.6;
     this.theme = DEFAULT_THEME;
     this.toy.mode = 'rest';
     this.place();
@@ -644,9 +647,9 @@ export class CatScene {
 
   private place(): void {
     const { lw, lh } = this;
-    this.placedLayout = this.layout;
+    this.placedLayout = this.layout + this.floorFrac;
     // In play the floor is raised so the typing panel can sit on it below the cat.
-    this.floorY = Math.round(lh * (this.layout === 'center' ? 0.6 : 0.8));
+    this.floorY = Math.round(lh * (this.layout === 'center' ? this.floorFrac : 0.8));
     this.footY = this.floorY + 6;
     this.homeX = Math.round(clamp(lw * (this.layout === 'right' ? 0.6 : 0.42), 40, Math.max(40, lw - 90)));
     if (!this.cat.placed) {
@@ -666,7 +669,7 @@ export class CatScene {
   private placedLayout = '';
 
   private update(dt: number): void {
-    if (this.layout !== this.placedLayout) this.place();
+    if (this.layout + this.floorFrac !== this.placedLayout) this.place();
     this.clock += dt;
     this.beat = this.beatSource ? this.beatSource() : (this.clock * this.bpm) / 60;
     const toy = this.toy;
@@ -795,7 +798,7 @@ export class CatScene {
   }
 
   private draw(): void {
-    const key = `${this.lw}x${this.lh}|${JSON.stringify(this.theme)}|${this.outfit.decor}|${this.layout}`;
+    const key = `${this.lw}x${this.lh}|${JSON.stringify(this.theme)}|${this.outfit.decor}|${this.layout}|${this.floorY}`;
     if (key !== this.roomKey) {
       this.roomKey = key;
       this.renderRoom();
@@ -823,7 +826,7 @@ export class CatScene {
 
     // window geometry
     const ww = Math.round(clamp(lw * 0.26, 56, 110));
-    const wh = Math.round(lh * 0.4);
+    const wh = Math.round((fy - lh * 0.1) * 0.58); // the window scales with the wall height
     const wx = Math.round(lw * 0.3 - ww / 2);
     const wy = Math.round(lh * 0.1);
     this.geo = { win: { x: wx, y: wy, w: ww, h: wh }, stars: [], bulbs: [], screen: null, mug: null, antenna: null };

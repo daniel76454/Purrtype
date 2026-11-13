@@ -3,10 +3,12 @@ import assert from 'node:assert/strict';
 import { SECTIONS } from '../dist/data/sections.js';
 import { judgeTiming } from '../dist/game/beat.js';
 import { TypingEngine } from '../dist/game/typing.js';
-import { GameSession, HEARTS, RECOVER_BASS, RECOVER_FULL, COUNT_IN_BEATS } from '../dist/game/session.js';
-import { wordSlots, wordLengthAt } from '../dist/game/chart.js';
+import { GameSession, HEARTS, RECOVER_BASS, RECOVER_FULL } from '../dist/game/session.js';
 import { mergeSaves } from '../dist/core/merge.js';
 import { defaultSave } from '../dist/core/storage.js';
+import { generatePractice, PracticeEngine, practiceScore } from '../dist/game/practice.js';
+import { calibrationOffset } from '../dist/game/calibrate.js';
+import { cleanNickname, randomNickname, NAME_MAX } from '../dist/core/names.js';
 
 let passed = 0;
 const test = (name, fn) => {
@@ -210,44 +212,6 @@ test('session: audio offset shifts judging', () => {
   assert.equal(s.score, 100);
 });
 
-// ---- word mode -----------------------------------------------------------------------
-test('chart: longer words get more beats, every word gets at least one', () => {
-  // 60 wpm = 5 chars/s; at 60 bpm a beat is 1 s
-  assert.equal(wordSlots(5, 60, 60, 1), 1); // "four " = 1 s
-  assert.equal(wordSlots(10, 60, 60, 1), 2); // "something " = 2 s
-  assert.equal(wordSlots(2, 60, 60, 1), 1); // "a " is short but still gets a slot
-  assert.equal(wordLengthAt('she sniffs it ', 4), 7);
-});
-
-const wordLevel = (lines, wpm = 60) => ({ id: 'w', name: 'w', grid: 1, windowMs: 150, pool: '', lines, mode: 'words', wpm });
-
-test('word mode: letters are free, the space is judged when it is due', () => {
-  const s = new GameSession(wordLevel(['abcd efghi']), section, 0);
-  const typed = [];
-  s.on('typed', (e) => typed.push(e));
-  // "abcd " = 5 chars = 1 s = 1 beat at 60 bpm, so its space is due 1 beat after the count-in
-  assert.deepEqual(s.wordWindow, { from: COUNT_IN_BEATS, due: COUNT_IN_BEATS + 1 });
-  ['a', 'b', 'c', 'd'].forEach((k, i) => s.handleKey(k, 4.05 + i * 0.13)); // any timing
-  assert.ok(typed.every((e) => e.grade === 'free'));
-  assert.equal(s.combo, 0);
-  s.handleKey(' ', 5.02);
-  assert.equal(typed.at(-1).grade, 'perfect');
-  assert.equal(s.combo, 1);
-  assert.equal(s.score, 400, 'a word scores per letter');
-});
-
-test('word mode: a late space re-syncs the next word instead of snowballing', () => {
-  const s = new GameSession(wordLevel(['abcd efghi jk']), section, 0);
-  'abcd'.split('').forEach((k) => s.handleKey(k, 4.2));
-  s.handleKey(' ', 5.4); // 400 ms late: off
-  assert.equal(s.combo, 0);
-  // the next word starts from the slot nearest the actual press (beat 5); "efghi " = 6 chars -> 1 beat
-  assert.deepEqual(s.wordWindow, { from: 5, due: 6 });
-  'efghi'.split('').forEach((k) => s.handleKey(k, 5.5));
-  s.handleKey(' ', 6.0);
-  assert.equal(s.combo, 1, 'back on the beat after one slip');
-});
-
 // ---- cloud save merging -----------------------------------------------------------------
 test('mergeSaves: best progress per level, union of items, newest balance and settings', () => {
   const base = defaultSave();
@@ -277,6 +241,76 @@ test('mergeSaves: best progress per level, union of items, newest balance and se
   assert.equal(m.settings.audioOffsetMs, 40, 'audio offset stays with the device');
   assert.equal(m.equipped.toy, 'toy.fish');
   assert.equal(m.updatedAt, 200);
+});
+
+// ---- practice mode ------------------------------------------------------------------------
+test('practice: generated text is about 100 words in short lines', () => {
+  const lines = generatePractice(42);
+  const words = lines.join(' ').split(' ').length;
+  assert.ok(words >= 100 && words <= 115, `${words} words`);
+  assert.ok(lines.every((l) => l.length <= 42 && l === l.trim()));
+  assert.deepEqual(generatePractice(42), lines, 'same seed, same text');
+});
+
+test('practice: mistakes block progress until fixed with backspace', () => {
+  const e = new PracticeEngine(['ab cd']);
+  e.key('a', 0);
+  const bad = e.key('x', 100);
+  assert.equal(bad.correct, false);
+  assert.equal(bad.firstErrorInWord, true);
+  assert.equal(e.key('b', 200).correct, false, 'typing on after a mistake is still wrong');
+  e.backspace();
+  e.backspace();
+  assert.equal(e.typed, 'a');
+  assert.equal(e.key('b', 300).correct, true);
+  const w = e.key(' ', 400);
+  assert.deepEqual(w, { kind: 'word', clean: false });
+  assert.equal(e.combo, 0, 'a corrected word does not add to the combo');
+  assert.equal(e.backspace().kind, 'ignored', "can't delete back into a finished word");
+});
+
+test('practice: clean words build the combo, finishing gives wpm, accuracy and score', () => {
+  const e = new PracticeEngine(['ab cd', 'ef']);
+  // 12 seconds for "ab cd ef " (9 chars) with one mistake
+  [...'ab cd '].forEach((k, i) => e.key(k, i * 1000));
+  assert.equal(e.combo, 2);
+  e.key('x', 6000);
+  e.backspace();
+  e.key('e', 7000);
+  e.key('f', 8000);
+  e.key(' ', 12000);
+  assert.equal(e.finished, true);
+  const r = e.result();
+  assert.equal(r.seconds, 12);
+  assert.equal(r.wpm, 9); // 9 chars / 5 / 0.2 min
+  assert.equal(r.errors, 1);
+  assert.ok(Math.abs(r.accuracy - 9 / 10) < 1e-9);
+  assert.equal(r.score, practiceScore(9, 0.9));
+  assert.equal(r.maxCombo, 2);
+});
+
+test('practice: ctrl+backspace deletes the current word only', () => {
+  const e = new PracticeEngine(['one two']);
+  [...'one tw'].forEach((k) => e.key(k, 0));
+  e.backspace(true);
+  assert.equal(e.typed, 'one ');
+});
+
+// ---- calibration and nicknames ----------------------------------------------------------------
+test('calibration: median tap delay becomes the offset, strays ignored', () => {
+  const clicks = Array.from({ length: 12 }, (_, i) => i * 0.5);
+  const taps = clicks.map((c, i) => c + 0.04 + (i % 2 ? 0.01 : -0.01)); // ~40 ms late
+  taps.push(3.24); // a stray tap between clicks
+  const r = calibrationOffset(taps, clicks);
+  assert.equal(r.offsetMs, 40);
+  assert.equal(r.taps, 12);
+  assert.equal(calibrationOffset(taps.slice(0, 3), clicks), null, 'too few taps');
+});
+
+test('nicknames: cleaned, capped, and random ones look cozy', () => {
+  assert.equal(cleanNickname('  <b>Dan</b>!!  '), 'bDanb');
+  assert.equal(cleanNickname('x'.repeat(40)).length, NAME_MAX);
+  assert.match(randomNickname(() => 0), /^[A-Z][a-z]+[A-Z][a-z]+\d\d$/);
 });
 
 console.log(`\n${passed} tests passed`);

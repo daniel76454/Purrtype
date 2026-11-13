@@ -32,14 +32,8 @@ export interface LevelDef {
   grid: 1 | 2;
   /** Base "good" window in ms; tightened further by the grid (see judgeTiming). */
   windowMs: number;
-  /**
-   * 'letters' (default): every key is judged against the grid.
-   * 'words': letters are free and only the space after each word is judged; each word gets a
-   * number of grid slots based on its length at `wpm` (see src/game/chart.ts).
-   */
-  mode?: 'letters' | 'words';
-  /** Word mode: target typing speed in words per minute. */
-  wpm?: number;
+  /** A short, optional typing tip shown until the level is first cleared. Suggestions, not rules. */
+  tip?: string;
   /** Characters this level is allowed to use (checked by `npm test`). */
   pool: string;
   lines: string[];
@@ -85,6 +79,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l1',
         name: 'Warm Up',
+        tip: 'Tip: rest your index fingers on F and J (feel the little bumps). The others settle on A S D and K L.',
         grid: 1,
         windowMs: 150,
         pool: HOME_CORE,
@@ -97,6 +92,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l2',
         name: 'First Steps',
+        tip: 'Tip: tap space with whichever thumb feels natural.',
         grid: 1,
         windowMs: 145,
         pool: HOME_CORE,
@@ -109,6 +105,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l3',
         name: 'Gliding',
+        tip: 'Tip: G and H are a small sideways reach for the index fingers. Then drift back home.',
         grid: 1,
         windowMs: 135,
         pool: HOME,
@@ -121,6 +118,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l4',
         name: 'Glad Flags',
+        tip: 'Tip: try keeping your eyes on the screen, not your hands. Your fingers know more than you think.',
         grid: 1,
         windowMs: 130,
         pool: HOME,
@@ -133,6 +131,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l5',
         name: 'Double Time',
+        tip: 'Tip: at double time, lighter taps are faster than harder ones. Stay loose.',
         grid: 2,
         windowMs: 115,
         pool: HOME,
@@ -177,6 +176,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's2l1',
         name: 'Reaching Up',
+        tip: 'Tip: reach up from the home row and come back. Left hand takes Q to T, right hand takes Y to P.',
         grid: 1,
         windowMs: 150,
         pool: TOP,
@@ -201,6 +201,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's2l3',
         name: 'Wool Chase',
+        tip: "Tip: if a key feels better with a different finger, that's fine. Find what's comfortable for you.",
         grid: 1,
         windowMs: 135,
         pool: TOP,
@@ -268,6 +269,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's3l1',
         name: 'Moonlight',
+        tip: "Tip: for capitals, many typists hold Shift with the other hand's little finger.",
         grid: 1,
         windowMs: 150,
         pool: EVERYTHING,
@@ -280,6 +282,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's3l2',
         name: 'Big Eyes',
+        tip: 'Tip: comma and period sit just below K and L.',
         grid: 1,
         windowMs: 145,
         pool: EVERYTHING,
@@ -316,6 +319,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's3l5',
         name: 'Midnight Zoomies',
+        tip: "Tip: short breaks between levels help more than you'd think. Stretch those paws.",
         grid: 2,
         windowMs: 115,
         pool: EVERYTHING,
@@ -342,7 +346,7 @@ export const SECTIONS: SectionDef[] = [
   {
     id: 's4',
     name: 'Night Owl',
-    blurb: 'Word rhythm: type each word freely and land the space on the beat.',
+    blurb: 'Two in the morning. Faster beats, and a mystery toy.',
     bpm: 105,
     music: { rootMidi: 55, scale: MINOR, progression: [0, 3, 4, 2], seed: 51 },
     theme: {
@@ -359,10 +363,9 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's4l1',
         name: 'Wide Awake',
+        tip: 'Tip: speed comes from rhythm, not force. Let the beat carry you.',
         grid: 1,
-        windowMs: 150,
-        mode: 'words',
-        wpm: 25,
+        windowMs: 130,
         pool: EVERYTHING,
         lines: [
           'Mochi wakes up. The clock says two.',
@@ -374,9 +377,7 @@ export const SECTIONS: SectionDef[] = [
         id: 's4l2',
         name: 'The Bell',
         grid: 1,
-        windowMs: 145,
-        mode: 'words',
-        wpm: 28,
+        windowMs: 125,
         pool: EVERYTHING,
         lines: [
           'She hops off the bed without a sound.',
@@ -387,10 +388,8 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's4l3',
         name: 'Tiptoe',
-        grid: 1,
-        windowMs: 135,
-        mode: 'words',
-        wpm: 32,
+        grid: 2,
+        windowMs: 110,
         pool: EVERYTHING,
         lines: [
           'She sniffs it once, then twice.',
@@ -401,10 +400,8 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's4l4',
         name: 'Rolling Away',
-        grid: 1,
-        windowMs: 130,
-        mode: 'words',
-        wpm: 35,
+        grid: 2,
+        windowMs: 105,
         pool: EVERYTHING,
         lines: [
           'The toy rolls away down the hall!',
@@ -415,10 +412,8 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's4l5',
         name: 'Kitchen Run',
-        grid: 1,
-        windowMs: 120,
-        mode: 'words',
-        wpm: 38,
+        grid: 2,
+        windowMs: 100,
         pool: EVERYTHING,
         lines: [
           'Into the kitchen, over the cold tiles.',
@@ -429,10 +424,8 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's4l6',
         name: 'Got It',
-        grid: 1,
-        windowMs: 110,
-        mode: 'words',
-        wpm: 42,
+        grid: 2,
+        windowMs: 95,
         pool: EVERYTHING,
         lines: [
           'Her paw finds it. Got it, at last!',
@@ -445,7 +438,7 @@ export const SECTIONS: SectionDef[] = [
   {
     id: 's5',
     name: 'Witching Hour',
-    blurb: 'Word rhythm at full speed. A storm, a moth, and the fastest paws in town.',
+    blurb: 'The fastest section. A storm, a moth, and quick little paws.',
     bpm: 120,
     music: { rootMidi: 53, scale: MINOR, progression: [0, 5, 3, 4], seed: 67 },
     theme: {
@@ -463,10 +456,9 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l1',
         name: 'Three O\'Clock',
+        tip: 'Tip: if you slip, let the word go and catch the next beat. The cat will fetch the toy back.',
         grid: 1,
         windowMs: 120,
-        mode: 'words',
-        wpm: 40,
         pool: EVERYTHING,
         lines: [
           'At three, the wind starts to howl.',
@@ -477,10 +469,8 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l2',
         name: 'Shadows',
-        grid: 1,
+        grid: 2,
         windowMs: 110,
-        mode: 'words',
-        wpm: 45,
         pool: EVERYTHING,
         lines: [
           'A shadow moves across the wall.',
@@ -491,10 +481,8 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l3',
         name: 'Moth Chase',
-        grid: 1,
+        grid: 2,
         windowMs: 100,
-        mode: 'words',
-        wpm: 50,
         pool: EVERYTHING,
         lines: [
           'Up the shelf, past the books, she climbs.',
@@ -505,10 +493,8 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l4',
         name: 'Storm',
-        grid: 1,
-        windowMs: 95,
-        mode: 'words',
-        wpm: 55,
+        grid: 2,
+        windowMs: 90,
         pool: EVERYTHING,
         lines: [
           'Now the rain comes down in sheets.',
@@ -519,10 +505,8 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l5',
         name: 'Quiet Again',
-        grid: 1,
-        windowMs: 90,
-        mode: 'words',
-        wpm: 60,
+        grid: 2,
+        windowMs: 85,
         pool: EVERYTHING,
         lines: [
           'Slowly, the storm drifts out to sea.',
@@ -533,10 +517,8 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's5l6',
         name: 'First Light',
-        grid: 1,
-        windowMs: 85,
-        mode: 'words',
-        wpm: 65,
+        grid: 2,
+        windowMs: 80,
         pool: EVERYTHING,
         lines: [
           'The sky turns pink, then gold.',
