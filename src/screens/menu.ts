@@ -8,6 +8,7 @@ import { SettingsScreen } from './settings.js';
 import { PracticeScreen } from './practice.js';
 
 export class MenuScreen implements Screen {
+  readonly menuMusic = true;
   constructor(private nav: Navigator) {}
 
   mount(root: HTMLElement): void {

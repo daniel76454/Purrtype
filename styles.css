@@ -130,6 +130,7 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
 .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; margin-bottom: 14px; }
 .item { background: var(--card); padding: 12px; margin: 3px; display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; box-shadow: 0 -3px 0 0 var(--outline), 0 3px 0 0 var(--outline), -3px 0 0 0 var(--outline), 3px 0 0 0 var(--outline); }
 .item:hover { background: var(--card-hi); }
+.item.in-use .name::after { content: ' ✓'; color: var(--good); }
 .item.trying { box-shadow: 0 -3px 0 0 var(--accent), 0 3px 0 0 var(--accent), -3px 0 0 0 var(--accent), 3px 0 0 0 var(--accent); }
 .item .swatch { width: 80px; height: 80px; display: grid; place-items: center; background: var(--panel-solid); box-shadow: inset 0 0 0 2px var(--outline); }
 .icon-canvas { height: 72px; width: auto; image-rendering: pixelated; }
@@ -227,8 +228,9 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
 /* ---------- keyboard guide ---------- */
 .kb { margin: 12px auto 0; display: grid; gap: 4px; justify-content: center; font-family: var(--mono); }
 .kb-row { display: flex; gap: 4px; justify-content: center; }
-.kb-row.r0 { margin-left: -14px; }
-.kb-row.r1 { margin-left: 6px; }
+.kb-row.r0 { margin-left: -40px; }
+.kb-row.r1 { margin-left: -14px; }
+.kb-row.r2 { margin-left: 6px; }
 .kb-key { position: relative; min-width: 27px; height: 25px; padding: 0 4px; display: grid; place-items: center; font-size: 14px; line-height: 1; color: var(--ink-dim); background: var(--card); box-shadow: 0 0 0 2px var(--outline), inset 0 -3px 0 var(--finger, rgba(0, 0, 0, 0.3)); }
 .kb-key.wide { min-width: 46px; font-size: 14px; }
 .kb-key.space { min-width: 220px; font-size: 14px; }
@@ -275,3 +277,12 @@ select:focus-visible, input[type='text']:focus-visible { outline: 3px dashed var
 .kb:has(.kb-hands) { margin-bottom: 34px; }
 @keyframes holo { 0%, 100% { opacity: 0.85; } 50% { opacity: 1; } 52% { opacity: 0.7; } 54% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .kb-hands { animation: none; } }
+
+/* intro card: new keys glow */
+.kb-key.intro { background: var(--perfect); color: var(--outline); animation: introGlow 1.2s steps(4) infinite; }
+@keyframes introGlow { 50% { box-shadow: 0 0 0 2px var(--outline), 0 0 0 5px rgba(255, 211, 107, 0.45); } }
+.intro-card { max-width: 520px; text-align: center; }
+.intro-card .kb { margin: 8px auto 4px; }
+.intro-card .hint { font-size: 15px; color: var(--ink); line-height: 1.5; }
+
+.quote-sources { margin-top: 10px; font-size: 13px; color: var(--ink-soft); line-height: 1.5; }

@@ -1,6 +1,6 @@
 import { Emitter } from '../core/events.js';
 import { mergeSaves, sameSave } from '../core/merge.js';
-import { store } from '../core/storage.js';
+import { normalizeSave, store } from '../core/storage.js';
 import type { SaveData } from '../core/types.js';
 import { FIREBASE_CONFIG, FIREBASE_SDK } from './config.js';
 import { cleanNickname, randomNickname } from '../core/names.js';
@@ -153,7 +153,7 @@ class Cloud extends Emitter<{ change: void }> {
       const snap = await fsMod.getDoc(fsMod.doc(db, 'saves', this.user.uid));
       const local = store.data;
       if (snap.exists()) {
-        const remote = JSON.parse(snap.data().data) as SaveData;
+        const remote = normalizeSave(JSON.parse(snap.data().data));
         const merged = mergeSaves(local, remote);
         this.applyingRemote = true;
         if (!sameSave(merged, local)) store.replace(merged);

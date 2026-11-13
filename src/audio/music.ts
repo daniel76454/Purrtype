@@ -45,6 +45,8 @@ export class MusicDirector {
   private stepTime = 0;
   private step = 0;
   private section!: SectionDef;
+  /** Play the 4 count-in clicks (and the optional metronome). Off for background music. */
+  private clicks = true;
   private melody: (number | null)[][] = [];
   private sources: AudioBufferSourceNode[] = [];
   private crackle: AudioBuffer | null = null;
@@ -79,7 +81,8 @@ export class MusicDirector {
     return (audio.heardTime() - this.startTime) / this.secondsPerBeat;
   }
 
-  async start(section: SectionDef, leadIn = 0.3): Promise<void> {
+  async start(section: SectionDef, leadIn = 0.3, opts: { clicks?: boolean; volume?: number } = {}): Promise<void> {
+    this.clicks = opts.clicks ?? true;
     await audio.resume();
     this.stop(0);
     this.section = section;
@@ -92,6 +95,7 @@ export class MusicDirector {
     warm.type = 'lowpass';
     warm.frequency.value = 3200;
     warm.Q.value = 0.5;
+    this.out.gain.value = opts.volume ?? 1;
     this.out.connect(warm).connect(audio.musicBus);
     const crackle = c.createBufferSource();
     crackle.buffer = this.crackleBuffer();
@@ -170,7 +174,7 @@ export class MusicDirector {
     const beat = Math.floor(i / 4);
 
     // Count-in (first bar) and optional metronome.
-    if (s % 4 === 0 && (beat < 4 || store.data.settings.metronome)) sfx.tick(t, s === 0);
+    if (this.clicks && s % 4 === 0 && (beat < 4 || store.data.settings.metronome)) sfx.tick(t, s === 0);
 
     if (this.section.music.stems && Object.keys(this.section.music.stems).length) return;
 

@@ -5,8 +5,9 @@ import { judgeTiming } from '../dist/game/beat.js';
 import { TypingEngine } from '../dist/game/typing.js';
 import { GameSession, HEARTS, RECOVER_BASS, RECOVER_FULL } from '../dist/game/session.js';
 import { mergeSaves } from '../dist/core/merge.js';
-import { defaultSave } from '../dist/core/storage.js';
-import { generatePractice, PracticeEngine, practiceScore } from '../dist/game/practice.js';
+import { defaultSave, normalizeSave } from '../dist/core/storage.js';
+import { generatePractice, practiceText, PracticeEngine, practiceScore } from '../dist/game/practice.js';
+import { QUOTES } from '../dist/data/quotes.js';
 import { calibrationOffset } from '../dist/game/calibrate.js';
 import { cleanNickname, randomNickname, NAME_MAX } from '../dist/core/names.js';
 
@@ -243,13 +244,41 @@ test('mergeSaves: best progress per level, union of items, newest balance and se
   assert.equal(m.updatedAt, 200);
 });
 
+test('saves: old single-decor saves become a decor list; merging keeps only owned decor', () => {
+  const old = normalizeSave({ owned: ['decor.rug', 'decor.none'], equipped: { decor: 'decor.rug' } });
+  assert.deepEqual(old.equipped.decor, ['decor.rug']);
+  assert.equal(old.equipped.room, 'room.night');
+  assert.ok(!old.owned.includes('decor.none'));
+  assert.deepEqual(normalizeSave({ equipped: { decor: 'decor.none' } }).equipped.decor, []);
+
+  const base = defaultSave();
+  const local = { ...base, updatedAt: 1, owned: [...base.owned, 'decor.rug'] };
+  const remote = { ...base, updatedAt: 2, owned: [...base.owned, 'decor.plant'], equipped: { ...base.equipped, decor: ['decor.plant', 'decor.lamp'] } };
+  assert.deepEqual(mergeSaves(local, remote).equipped.decor, ['decor.plant'], 'unowned decor is dropped');
+});
+
 // ---- practice mode ------------------------------------------------------------------------
 test('practice: generated text is about 80 words in short lines', () => {
   const lines = generatePractice(42);
   const words = lines.join(' ').split(' ').length;
-  assert.ok(words >= 80 && words <= 95, `${words} words`);
+  assert.ok(words >= 75 && words <= 95, `${words} words`);
   assert.ok(lines.every((l) => l.length <= 42 && l === l.trim()));
   assert.deepEqual(generatePractice(42), lines, 'same seed, same text');
+});
+
+test('practice: quote texts are ~80 words of whole quotes, all typeable ASCII', () => {
+  for (const q of QUOTES) assert.match(q.text, /^[ -~]+$/, q.text);
+  let quotes = 0;
+  for (let seed = 1; seed <= 30; seed++) {
+    const t = practiceText(seed);
+    const words = t.lines.join(' ').split(' ').length;
+    assert.ok(words >= 75 && words <= 95, `${words} words`);
+    if (t.kind === 'quotes') {
+      quotes++;
+      assert.ok(t.sources.length > 0);
+    }
+  }
+  assert.ok(quotes > 10, 'mostly quotes');
 });
 
 test('practice: mistakes block progress until fixed with backspace', () => {

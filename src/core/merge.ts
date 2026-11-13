@@ -26,9 +26,9 @@ export function mergeSaves(local: SaveData, remote: SaveData): SaveData {
   }
 
   const owned = Array.from(new Set([...local.owned, ...remote.owned]));
-  const equipped = { ...newer.equipped };
-  for (const [cat, id] of Object.entries(equipped)) {
-    if (!owned.includes(id)) equipped[cat as keyof typeof equipped] = local.equipped[cat as keyof typeof equipped];
+  const equipped = { ...newer.equipped, decor: newer.equipped.decor.filter((id) => owned.includes(id)) };
+  for (const cat of ['fur', 'hat', 'collar', 'toy', 'room'] as const) {
+    if (!owned.includes(equipped[cat])) equipped[cat] = local.equipped[cat];
   }
 
   return {

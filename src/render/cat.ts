@@ -1,6 +1,6 @@
 import type { Grade, Outfit } from '../core/types.js';
 import type { Theme } from '../data/sections.js';
-import { itemById } from '../data/shop.js';
+import { itemById, type FurPattern, type WallStyle } from '../data/shop.js';
 
 /*
  * Pixel-art renderer for the background room, the cat and its toy.
@@ -39,7 +39,8 @@ const DEFAULT_OUTFIT: Outfit = {
   collar: 'collar.none',
   toy: 'toy.yarn',
   fur: 'fur.orange',
-  decor: 'decor.none',
+  room: 'room.night',
+  decor: [],
 };
 
 export const DEFAULT_THEME: Theme = {
@@ -144,6 +145,18 @@ const FEATHER_PAL = { t: '#5fc8bd', T: '#2f8f88', b: '#8a6a52' };
 const FISH: Sprite = ['....bbbb...', 'b..bbbbbbb.', 'bbbbbbbwkb.', 'bbbbbbbbbbb', 'b..bBbBbbb.', '....bbbb...'];
 const FISH_PAL = { b: '#6cb4e8', B: '#3f7fb8', w: WHITE, k: OUTLINE };
 
+const PAPER: Sprite = ['.wWw..', 'wwwWw.', 'Wwwwww', 'wwWwwW', '.wwwW.', '..Ww..'];
+const PAPER_PAL = { w: '#f2efe6', W: '#c9c2d6' };
+
+const CARROT: Sprite = ['...g.g', '....gg', '...oo.', '..ooo.', '..oOo.', '.ooo..', '.oO...', 'oo....'];
+const CARROT_PAL = { g: '#6fbf73', o: '#f28c3a', O: '#c8642a' };
+
+const STAR: Sprite = ['...y...', '..yyy..', 'yyyyyyy', '.yyYyy.', '..yyy..', '.yy.yy.', '.y...y.'];
+const STAR_PAL = { y: '#ffd36b', Y: '#e8a63a' };
+
+const DONUT: Sprite = ['.ppppp.', 'pPpSpPp', 'pp...pp', 'dd...dd', 'ddddddd', '.ddddd.'];
+const DONUT_PAL = { p: '#f29bb0', P: '#ffd1dc', S: '#7fd1b9', d: '#d9a066' };
+
 const HEART: Sprite = ['pp.pp', 'ppppp', '.ppp.', '..p..'];
 
 function toySprite(id: string, frame: number): [Sprite, Record<string, string>] {
@@ -154,6 +167,14 @@ function toySprite(id: string, frame: number): [Sprite, Record<string, string>] 
       return [FEATHER, FEATHER_PAL];
     case 'toy.fish':
       return [FISH, FISH_PAL];
+    case 'toy.paper':
+      return [PAPER, PAPER_PAL];
+    case 'toy.carrot':
+      return [CARROT, CARROT_PAL];
+    case 'toy.star':
+      return [STAR, STAR_PAL];
+    case 'toy.donut':
+      return [DONUT, DONUT_PAL];
     default:
       return [YARN[frame & 1]!, YARN_PAL];
   }
@@ -168,6 +189,7 @@ const OY = 57;
 
 interface CatPose {
   fur: string;
+  pattern: FurPattern;
   outfit: Outfit;
   /** Whole-body offset in px (negative = up, for hops). */
   bob: number;
@@ -186,8 +208,9 @@ interface CatPose {
   blush: boolean;
 }
 
-const IDLE_POSE = (fur: string, outfit: Outfit): CatPose => ({
+const IDLE_POSE = (fur: string, outfit: Outfit, pattern: FurPattern = 'solid'): CatPose => ({
   fur,
+  pattern,
   outfit,
   bob: 0,
   squash: 0,
@@ -230,7 +253,7 @@ function drawCatSprite(c: Ctx, p: CatPose): void {
   const soft = shade(fur, -0.16);
   const light = shade(fur, 0.35);
   const darkFur = lum(fur) < 0.3;
-  const ink = darkFur ? EYE : OUTLINE;
+  const ink = p.pattern === 'siamese' ? '#6fb6ff' : darkFur ? EYE : OUTLINE;
   const mouthCol = darkFur ? shade(fur, 0.45) : shade(fur, -0.5);
   const P = (x: number, y: number, col: string, w = 1, h = 1) => px(c, OX + x, OY + y, col, w, h);
   const { rx, ry, cy, top, face } = catGeo(p);
@@ -278,6 +301,40 @@ function drawCatSprite(c: Ctx, p: CatPose): void {
     P(w - 2, y, soft, 3, 1);
   }
   for (const x of [-7, -4, 4, 7]) P(x, cy + ry - 2, soft, 1, 3);
+
+  // coat patterns, painted only onto pixels the cat already has
+  c.globalCompositeOperation = 'source-atop';
+  if (p.pattern === 'tuxedo') {
+    const W = '#f1ece2';
+    ellipse(c, OX, OY + cy + 5, 8, 6, W); // bib
+    ellipse(c, OX, OY + face + 2, 5, 2, W); // muzzle
+    P(-11, cy + ry - 2, W, 8, 3); // socks
+    P(4, cy + ry - 2, W, 8, 3);
+  } else if (p.pattern === 'siamese') {
+    const D = '#5b4335';
+    ellipse(c, OX, OY + face + 1, 7, 4, '#8a6a55'); // face mask
+    P(-rx, top - 7, D, 8, 7); // ears
+    P(rx - 7, top - 7, D, 8, 7);
+    P(-rx, cy + ry - 2, D, rx * 2 + 1, 3); // paws
+    P(-22, -12, D, 8, 12); // tail
+  } else if (p.pattern === 'calico') {
+    ellipse(c, OX - 7, OY + cy - 3, 5, 4, '#e8955a');
+    ellipse(c, OX + 8, OY + top + 3, 5, 3, '#3a3540');
+    ellipse(c, OX + 9, OY + cy + 6, 3, 2, '#e8955a');
+    ellipse(c, OX - 10, OY + cy + 7, 2, 2, '#3a3540');
+    P(-22, -12, '#e8955a', 4, 12); // tail tip
+  } else if (p.pattern === 'tabby') {
+    const S = shade(fur, -0.4);
+    for (const y of [face + 4, face + 6, face + 8]) {
+      const w = hw(y);
+      P(-w, y, S, 4, 1);
+      P(w - 3, y, S, 4, 1);
+    }
+    P(-3, top + 1, S, 1, 3);
+    P(0, top, S, 1, 4);
+    P(3, top + 1, S, 1, 3);
+  }
+  c.globalCompositeOperation = 'source-over';
 
   // eyes
   for (const side of [-1, 1]) {
@@ -434,6 +491,98 @@ function drawPlant(c: Ctx, x: number, baseY: number): void {
   leaf(x + 3, baseY - 14, 3, 2, '#4f9a5c');
 }
 
+/** A round cat bed on the floor. */
+function drawBed(c: Ctx, x: number, baseY: number): void {
+  ellipse(c, x, baseY - 3, 12, 4, OUTLINE);
+  ellipse(c, x, baseY - 3, 11, 3, '#b5576a');
+  ellipse(c, x, baseY - 4, 8, 1, '#e8c4b0');
+  px(c, x - 11, baseY - 4, '#d9788a', 2, 1);
+  px(c, x + 10, baseY - 4, '#d9788a', 2, 1);
+}
+
+/** A little pile of books on the floor. */
+function drawBooks(c: Ctx, x: number, baseY: number): void {
+  const cols = ['#5b7fd1', '#e0b25a', '#b5576a', '#6aa8a0'];
+  cols.forEach((col, i) => {
+    const w = 14 - (i % 2) * 2;
+    const bx = x - 7 + (i % 2);
+    const by = baseY - 3 - i * 3;
+    px(c, bx - 1, by - 1, OUTLINE, w + 2, 4);
+    px(c, bx, by, col, w, 2);
+    px(c, bx + w - 3, by, '#f3e6d0', 2, 2);
+  });
+}
+
+/** A record player (sits on the windowsill). The vinyl spins in drawLive. */
+function drawRecord(c: Ctx, x: number, y: number): void {
+  px(c, x - 1, y - 6, OUTLINE, 14, 7);
+  px(c, x, y - 3, '#7a5650', 12, 3);
+  px(c, x, y - 5, '#5a3d3a', 12, 2);
+  ellipse(c, x + 5, y - 5, 4, 1, '#1a1622');
+  px(c, x + 5, y - 5, '#d9455f');
+  px(c, x + 10, y - 6, '#c9c2d6', 1, 2);
+}
+
+/** A round wall clock face (its hands show the real time, drawn in drawLive). */
+function drawClock(c: Ctx, cx: number, cy: number): void {
+  ellipse(c, cx, cy, 6, 6, OUTLINE);
+  ellipse(c, cx, cy, 5, 5, '#f3e6d0');
+  for (const [dx, dy] of [[0, -4], [4, 0], [0, 4], [-4, 0]] as const) px(c, cx + dx, cy + dy, '#8a7a6a');
+}
+
+/** Wall finish for room styles, laid over the wall gradient. */
+function drawWallPattern(c: Ctx, style: WallStyle, th: Theme, x0: number, y0: number, w: number, h: number): void {
+  if (style === 'plain') return;
+  c.save();
+  c.beginPath();
+  c.rect(x0, y0, w, h);
+  c.clip();
+  c.globalAlpha = 0.55;
+  const line = shade(th.wall, -0.35);
+  const hi = shade(th.wall, 0.16);
+  if (style === 'wood') {
+    for (let x = x0, i = 0; x < x0 + w; x += 9, i++) {
+      px(c, x, y0, line, 1, h);
+      px(c, x + 1, y0, hi, 1, h);
+      const seam = y0 + ((i * 37) % Math.max(1, h));
+      px(c, x + 1, seam, line, 8, 1);
+      if (i % 3 === 0) px(c, x + 4, y0 + ((i * 53 + 17) % Math.max(1, h)), line, 2, 1);
+    }
+  } else if (style === 'brick') {
+    for (let y = y0, row = 0; y < y0 + h; y += 6, row++) {
+      px(c, x0, y, line, w, 1);
+      for (let x = x0 - (row % 2 ? 7 : 0), i = 0; x < x0 + w; x += 14, i++) {
+        px(c, x, y, line, 1, 6);
+        if (hash(row * 31 + i) > 0.7) px(c, x + 1, y + 1, hi, 13, 5);
+      }
+    }
+  } else if (style === 'stars') {
+    for (let y = y0 + 4, row = 0; y < y0 + h; y += 12, row++) {
+      for (let x = x0 + (row % 2 ? 10 : 2); x < x0 + w; x += 20) {
+        px(c, x, y - 1, hi, 1, 3);
+        px(c, x - 1, y, hi, 3, 1);
+        px(c, x + 10, y + 6, hi);
+      }
+    }
+  } else if (style === 'stripes') {
+    for (let x = x0; x < x0 + w; x += 10) {
+      px(c, x, y0, hi, 5, h);
+      px(c, x + 5, y0, line, 1, h);
+    }
+  } else if (style === 'leaves') {
+    const leaf = shade('#5aa866', -0.2);
+    for (let y = y0 + 3, row = 0; y < y0 + h; y += 12, row++) {
+      for (let x = x0 + (row % 2 ? 8 : 1); x < x0 + w; x += 15) {
+        px(c, x, y + 2, leaf, 2, 1);
+        px(c, x + 1, y + 1, leaf, 2, 1);
+        px(c, x + 2, y, leaf, 2, 1);
+        px(c, x + 1, y + 3, line);
+      }
+    }
+  }
+  c.restore();
+}
+
 /** A tall paper floor lamp with its light. */
 function drawFloorLamp(c: Ctx, x: number, baseY: number, h: number, glow: string, withGlow = true): void {
   const top = baseY - h;
@@ -467,6 +616,9 @@ interface Geo {
   bulbs: { x: number; y: number; col: string }[];
   screen: { x: number; y: number; w: number; h: number } | null;
   mug: { x: number; y: number } | null;
+  desk: { x: number; w: number } | null;
+  clock: { x: number; y: number } | null;
+  record: { x: number; y: number } | null;
   antenna: { x: number; y: number } | null;
 }
 
@@ -502,7 +654,7 @@ export class CatScene {
   private catCtx: Ctx;
   private silBuf = document.createElement('canvas');
   private silCtx: Ctx;
-  private geo: Geo = { win: { x: 0, y: 0, w: 1, h: 1 }, stars: [], bulbs: [], screen: null, mug: null, antenna: null };
+  private geo: Geo = { win: { x: 0, y: 0, w: 1, h: 1 }, stars: [], bulbs: [], screen: null, mug: null, antenna: null, desk: null, clock: null, record: null };
 
   /** Device pixels per scene pixel. */
   private P = 4;
@@ -797,8 +949,18 @@ export class CatScene {
     return itemById(this.outfit.fur)?.color ?? '#e8955a';
   }
 
+  private furPattern(): FurPattern {
+    return itemById(this.outfit.fur)?.pattern ?? 'solid';
+  }
+
+  /** The room style: a bought room overrides the section's colours everywhere. */
+  private get look(): { theme: Theme; wall: WallStyle } {
+    const r = itemById(this.outfit.room)?.room;
+    return r ? { theme: r.theme, wall: r.wall } : { theme: this.theme, wall: 'plain' };
+  }
+
   private draw(): void {
-    const key = `${this.lw}x${this.lh}|${JSON.stringify(this.theme)}|${this.outfit.decor}|${this.layout}|${this.floorY}`;
+    const key = `${this.lw}x${this.lh}|${JSON.stringify(this.look)}|${this.outfit.decor.join()}|${this.layout}|${this.floorY}`;
     if (key !== this.roomKey) {
       this.roomKey = key;
       this.renderRoom();
@@ -818,7 +980,8 @@ export class CatScene {
 
   /** The static part of the room, cached until something it depends on changes. */
   private renderRoom(): void {
-    const { lw, lh, floorY: fy, theme: th } = this;
+    const { lw, lh, floorY: fy } = this;
+    const th = this.look.theme;
     this.room.width = lw;
     this.room.height = lh;
     const r = this.room.getContext('2d')!;
@@ -829,7 +992,7 @@ export class CatScene {
     const wh = Math.round((fy - lh * 0.1) * 0.58); // the window scales with the wall height
     const wx = Math.round(lw * 0.3 - ww / 2);
     const wy = Math.round(lh * 0.1);
-    this.geo = { win: { x: wx, y: wy, w: ww, h: wh }, stars: [], bulbs: [], screen: null, mug: null, antenna: null };
+    this.geo = { win: { x: wx, y: wy, w: ww, h: wh }, stars: [], bulbs: [], screen: null, mug: null, antenna: null, desk: null, clock: null, record: null };
 
     // dithered gradients for wall, sky and floor, written straight into pixels
     const ramp = (a: string, b: string, n: number) => Array.from({ length: n }, (_, i) => mixRGB(rgb(a), rgb(b), i / (n - 1)));
@@ -859,6 +1022,15 @@ export class CatScene {
     }
     r.putImageData(img, 0, 0);
 
+    // wall finish for bought rooms (not over the window)
+    r.save();
+    r.beginPath();
+    r.rect(0, 0, lw, fy - 4);
+    r.rect(wx - 3, wy - 3, ww + 6, wh + 6);
+    r.clip('evenodd');
+    drawWallPattern(r, this.look.wall, th, 0, 0, lw, fy - 4);
+    r.restore();
+
     this.renderWindow(r, rnd);
     this.renderWallStuff(r, rnd);
 
@@ -886,7 +1058,7 @@ export class CatScene {
   }
 
   private renderWindow(r: Ctx, rnd: () => number): void {
-    const th = this.theme;
+    const th = this.look.theme;
     const { x: wx, y: wy, w: ww, h: wh } = this.geo.win;
 
     // stars and moon
@@ -979,7 +1151,8 @@ export class CatScene {
   }
 
   private renderWallStuff(r: Ctx, rnd: () => number): void {
-    const { lw, lh, theme: th } = this;
+    const { lw, lh } = this;
+    const th = this.look.theme;
 
     // fairy lights hung in swags across the top of the wall
     const span = 64;
@@ -1035,11 +1208,13 @@ export class CatScene {
   }
 
   private renderDesk(r: Ctx): void {
-    const { lw, floorY: fy, theme: th } = this;
+    const { lw, floorY: fy } = this;
+    const th = this.look.theme;
     const dx = Math.round(lw * 0.76);
     const dw = Math.min(72, lw - dx - 2);
     if (dw < 40) return;
     const top = fy - 22;
+    this.geo.desk = { x: dx, w: dw };
     const wood = '#5a3d3a';
     const woodHi = '#7a5650';
 
@@ -1117,11 +1292,28 @@ export class CatScene {
     }
   }
 
+  /** Decor is additive: every placed item has its own spot. */
   private renderDecor(r: Ctx): void {
-    const id = this.outfit.decor;
-    if (id === 'decor.rug') drawRug(r, this.homeX + 4, this.footY + 2, 34, this.theme.accent);
-    else if (id === 'decor.plant') drawPlant(r, Math.max(10, this.homeX - 40), this.floorY + 4);
-    else if (id === 'decor.lamp') drawFloorLamp(r, Math.max(10, this.homeX - 44), this.floorY + 4, Math.round(this.lh * 0.42), this.theme.glow);
+    const has = (id: string) => this.outfit.decor.includes(id);
+    const th = this.look.theme;
+    const floor = this.floorY + 4;
+    if (has('decor.rug')) drawRug(r, this.homeX + 4, this.footY + 2, 34, th.accent);
+    if (has('decor.books')) drawBooks(r, Math.max(9, this.homeX - 88), floor);
+    if (has('decor.plant')) drawPlant(r, Math.max(10, this.homeX - 66), floor);
+    if (has('decor.lamp')) drawFloorLamp(r, Math.max(10, this.homeX - 44), floor, Math.round(this.lh * 0.42), th.glow);
+    if (has('decor.bed')) {
+      const d = this.geo.desk;
+      drawBed(r, d ? d.x + 16 : this.homeX + 50, floor);
+    }
+    if (has('decor.record')) {
+      const w = this.geo.win;
+      this.geo.record = { x: w.x + w.w - 16, y: w.y + w.h + 1 };
+      drawRecord(r, this.geo.record.x, this.geo.record.y);
+    }
+    if (has('decor.clock')) {
+      this.geo.clock = { x: Math.round(this.lw * 0.69), y: Math.round(this.lh * 0.15) };
+      drawClock(r, this.geo.clock.x, this.geo.clock.y);
+    }
   }
 
   /** Animated bits of the room: twinkling stars, rain, fairy lights on the beat, the monitor, steam. */
@@ -1143,7 +1335,7 @@ export class CatScene {
     }
     if (g.antenna && t % 1.6 < 0.5) px(b, g.antenna.x, g.antenna.y, '#ff5a6e');
 
-    if (this.theme.rain) {
+    if (this.look.theme.rain) {
       const w = g.win;
       b.save();
       b.beginPath();
@@ -1179,8 +1371,24 @@ export class CatScene {
       for (let i = 0; i * 3 + 2 < s.w; i++) {
         const v = hash(i * 7 + step * 13);
         const h = 1 + Math.round(v * (s.h - 3) * (1 - frac * 0.6));
-        px(b, s.x + 1 + i * 3, s.y + s.h - 1 - h, i % 2 ? this.theme.accent : shade(this.theme.accent, 0.35), 2, h);
+        const ac = this.look.theme.accent;
+        px(b, s.x + 1 + i * 3, s.y + s.h - 1 - h, i % 2 ? ac : shade(ac, 0.35), 2, h);
       }
+    }
+
+    // the wall clock shows the real time; the record spins
+    if (g.clock) {
+      const now = new Date();
+      const hand = (frac: number, len: number, col: string) => {
+        const a = frac * Math.PI * 2;
+        for (let k = 1; k <= len; k++) px(b, g.clock!.x + Math.round(Math.sin(a) * k), g.clock!.y - Math.round(Math.cos(a) * k), col);
+      };
+      hand(((now.getHours() % 12) + now.getMinutes() / 60) / 12, 2, OUTLINE);
+      hand(now.getMinutes() / 60, 4, '#5a4f94');
+    }
+    if (g.record) {
+      const a = t * 5;
+      px(b, g.record.x + 5 + Math.round(Math.cos(a) * 3), g.record.y - 5, '#5a4f94');
     }
 
     if (g.mug) {
@@ -1233,6 +1441,7 @@ export class CatScene {
     const mood = 1 - this.heartsFrac;
     return {
       fur: this.furColor(),
+      pattern: this.furPattern(),
       outfit: this.outfit,
       bob: k.run > 0.15 ? -Math.round(Math.abs(Math.sin(k.phase)) * 3 * k.run) : 0,
       squash: this.reducedMotion || k.run > 0.15 ? 0 : this.beatPulse,
@@ -1282,12 +1491,13 @@ export function itemIcon(id: string, furId = 'fur.orange'): HTMLCanvasElement {
 
   if (cat === 'hat' || cat === 'collar' || cat === 'fur') {
     const outfit = { ...DEFAULT_OUTFIT, [cat]: id };
-    const fur = itemById(cat === 'fur' ? id : furId)?.color ?? '#e8955a';
+    const furItem = itemById(cat === 'fur' ? id : furId);
+    const fur = furItem?.color ?? '#e8955a';
     const src = document.createElement('canvas');
     src.width = CAT_W;
     src.height = CAT_H;
     const sc = src.getContext('2d')!;
-    drawCatSprite(sc, IDLE_POSE(fur, outfit));
+    drawCatSprite(sc, IDLE_POSE(fur, outfit, furItem?.pattern));
     const sil = document.createElement('canvas');
     sil.width = CAT_W;
     sil.height = CAT_H;
@@ -1315,19 +1525,37 @@ export function itemIcon(id: string, furId = 'fur.orange'): HTMLCanvasElement {
     const h = spr.length;
     px(c, 15, 0, ROPE, 1, Math.max(1, 16 - Math.ceil(h / 2) - 1));
     stamp(c, spr, pal, 16 - Math.ceil(w / 2), 16 - Math.ceil(h / 2));
+  } else if (cat === 'room') {
+    const r = itemById(id)?.room;
+    const th = r?.theme ?? DEFAULT_THEME;
+    px(c, 0, 0, th.wallDark, 32, 8);
+    px(c, 0, 8, th.wall, 32, 16);
+    drawWallPattern(c, r?.wall ?? 'plain', th, 0, 0, 32, 23);
+    px(c, 4, 5, OUTLINE, 12, 11);
+    px(c, 5, 6, th.skyTop, 10, 4);
+    px(c, 5, 10, th.skyBottom, 10, 5);
+    px(c, 12, 7, '#f4ecc8', 2, 2);
+    px(c, 0, 23, OUTLINE, 32, 1);
+    px(c, 0, 24, th.floor, 32, 8);
+    px(c, 0, 28, th.floorDark, 32, 1);
+    px(c, 22, 12, th.accent, 5, 3);
+    px(c, 24, 15, OUTLINE, 1, 8);
   } else if (id === 'decor.rug') {
     drawRug(c, 16, 20, 11, DEFAULT_THEME.accent);
   } else if (id === 'decor.plant') {
     drawPlant(c, 16, 30);
   } else if (id === 'decor.lamp') {
     drawFloorLamp(c, 16, 31, 28, DEFAULT_THEME.glow, false);
-  } else {
-    // bare floor: a few planks
-    for (let i = 0; i < 4; i++) {
-      px(c, 4, 12 + i * 4, i % 2 ? '#4a3442' : '#3e2b38', 24, 4);
-      px(c, 4 + ((i * 9) % 20), 12 + i * 4, '#22172a', 1, 4);
-    }
-    px(c, 4, 12, OUTLINE, 24, 1);
+  } else if (id === 'decor.bed') {
+    drawBed(c, 16, 22);
+  } else if (id === 'decor.books') {
+    drawBooks(c, 16, 26);
+  } else if (id === 'decor.record') {
+    drawRecord(c, 10, 20);
+  } else if (id === 'decor.clock') {
+    drawClock(c, 16, 16);
+    px(c, 16, 13, OUTLINE, 1, 3);
+    px(c, 17, 16, '#5a4f94', 3, 1);
   }
   return cv;
 }

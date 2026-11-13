@@ -4,7 +4,7 @@ import { store } from '../core/storage.js';
 import { SECTIONS } from '../data/sections.js';
 import { MusicDirector } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
-import { generatePractice, PracticeEngine, type PracticeResult } from '../game/practice.js';
+import { practiceText, PracticeEngine, type PracticeResult, type PracticeText } from '../game/practice.js';
 import { KeyboardGuide } from './keyboard.js';
 import { button, icon, leaderboardBox } from './ui.js';
 import { MenuScreen } from './menu.js';
@@ -22,6 +22,7 @@ const YARN_PER_SCORE = 1 / 25;
 export class PracticeScreen implements Screen {
   private music = new MusicDirector();
   private engine: PracticeEngine;
+  private content: PracticeText;
   private raf = 0;
   private done = false;
   private recovering = false;
@@ -41,7 +42,8 @@ export class PracticeScreen implements Screen {
     private nav: Navigator,
     private seed = Math.floor(Math.random() * 1e9),
   ) {
-    this.engine = new PracticeEngine(generatePractice(this.seed));
+    this.content = practiceText(this.seed);
+    this.engine = new PracticeEngine(this.content.lines);
   }
 
   mount(root: HTMLElement): void {
@@ -65,7 +67,8 @@ export class PracticeScreen implements Screen {
       class: 'type-hint',
       text: `type at your own pace · fix mistakes with backspace${best ? ` · best ${best.bestScore} (${best.bestWpm ?? 0} wpm)` : ''}`,
     });
-    this.panel = h('div', { class: 'typing panel' }, this.text, hint, this.keyboard?.el);
+    const sources = this.sourcesEl();
+    this.panel = h('div', { class: 'typing panel' }, this.text, sources, hint, this.keyboard?.el);
 
     root.append(
       h(
@@ -75,7 +78,7 @@ export class PracticeScreen implements Screen {
           'div',
           { class: 'hud' },
           h('div', { class: 'practice-stats' }, h('span', {}, this.wpmEl, ' wpm'), h('span', {}, this.accEl, ' accuracy'), this.progEl),
-          h('div', { class: 'level-name', text: 'Practice · free typing' }),
+          h('div', { class: 'level-name', text: this.content.kind === 'quotes' ? 'Practice · famous quotes' : 'Practice · cozy story' }),
           button('Menu', () => this.nav.go(new MenuScreen(this.nav)), 'ghost small'),
         ),
         h('div', { class: 'combo' }, this.comboEl, h('div', { class: 'combo-label', text: 'combo' })),
@@ -183,6 +186,13 @@ export class PracticeScreen implements Screen {
     this.updateStats();
   }
 
+  /** Where the quotes came from (nothing for a cozy story). */
+  private sourcesEl(): HTMLElement | null {
+    const list = [...new Set(this.content.sources)];
+    if (!list.length) return null;
+    return h('div', { class: 'quote-sources' }, h('span', { class: 'dim', text: 'quotes from ' }), list.join(' · '));
+  }
+
   private finish(): void {
     this.done = true;
     cancelAnimationFrame(this.raf);
@@ -233,6 +243,7 @@ export class PracticeScreen implements Screen {
             h('div', { class: 'stat' }, h('span', { text: 'Yarn earned' }), h('b', {}, icon('yarn'), ` ${yarn}`)),
           ),
           h('p', { class: 'hint', text: 'Score = wpm × accuracy³ × 10, so accuracy counts for a lot.' }),
+          this.sourcesEl(),
           leaderboardBox(PRACTICE_ID, r.score, r.maxCombo),
           h(
             'div',

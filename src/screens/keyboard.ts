@@ -9,6 +9,7 @@ import { h } from '../core/dom.js';
 
 /** Finger index 0..7: left pinky → right pinky. 8 and 9 are the left and right thumbs. */
 const ROWS: [string, number][][] = [
+  [['1', 0], ['2', 1], ['3', 2], ['4', 3], ['5', 3], ['6', 4], ['7', 4], ['8', 5], ['9', 6], ['0', 7]],
   [['q', 0], ['w', 1], ['e', 2], ['r', 3], ['t', 3], ['y', 4], ['u', 4], ['i', 5], ['o', 6], ['p', 7]],
   [['a', 0], ['s', 1], ['d', 2], ['f', 3], ['g', 3], ['h', 4], ['j', 4], ['k', 5], ['l', 6], [';', 7], ["'", 7]],
   [['⇧L', 0], ['z', 0], ['x', 1], ['c', 2], ['v', 3], ['b', 3], ['n', 4], ['m', 4], [',', 5], ['.', 6], ['/', 7], ['⇧R', 7]],
@@ -18,7 +19,7 @@ const ROWS: [string, number][][] = [
 const HOME = ['a', 's', 'd', 'f', 'j', 'k', 'l', ';'];
 
 /** Characters typed with Shift on a US layout, mapped to their base key. */
-const SHIFTED: Record<string, string> = { '?': '/', ':': ';', '"': "'", '<': ',', '>': '.' };
+const SHIFTED: Record<string, string> = { '?': '/', ':': ';', '"': "'", '<': ',', '>': '.', '!': '1' };
 
 const SVG = 'http://www.w3.org/2000/svg';
 
@@ -88,6 +89,14 @@ export class KeyboardGuide {
     }
     this.lit.forEach((k) => k.classList.add('next'));
     if (this.svg) requestAnimationFrame(() => this.drawHands());
+  }
+
+  /** Intro card: make `keys` glow ('⇧' = both Shift keys). */
+  spotlight(keys: string): void {
+    for (const ch of keys) {
+      const targets = ch === '⇧' ? [this.keys.get('⇧L'), this.keys.get('⇧R')] : [this.keys.get(SHIFTED[ch] ?? ch.toLowerCase())];
+      targets.forEach((k) => k?.classList.add('intro'));
+    }
   }
 
   // ---- holographic hands --------------------------------------------------------

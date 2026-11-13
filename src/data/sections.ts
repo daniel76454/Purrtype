@@ -32,6 +32,12 @@ export interface LevelDef {
   grid: 1 | 2;
   /** Base "good" window in ms; tightened further by the grid (see judgeTiming). */
   windowMs: number;
+  /**
+   * This level brings in new keys: a short card shows where they are before it starts (until the
+   * level is cleared), and the keyboard guide with the holographic hands appears automatically.
+   * `keys` uses '⇧' for Shift.
+   */
+  intro?: { title: string; text: string; keys: string };
   /** A short, optional typing tip shown until the level is first cleared. Suggestions, not rules. */
   tip?: string;
   /** Characters this level is allowed to use (checked by `npm test`). */
@@ -56,7 +62,10 @@ const HOME_CORE = 'asdfjkl ';
 const HOME = 'asdfghjkl ';
 const TOP = HOME + 'qwertyuiop';
 const LOWER = 'abcdefghijklmnopqrstuvwxyz';
-const EVERYTHING = LOWER + LOWER.toUpperCase() + " .,'!?";
+const LOWER_SP = LOWER + ' ';
+const CAPS = LOWER_SP + LOWER.toUpperCase();
+const STOPS = CAPS + '.,';
+const EVERYTHING = STOPS + `'"!?;:`;
 
 export const SECTIONS: SectionDef[] = [
   {
@@ -79,6 +88,11 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l1',
         name: 'Warm Up',
+        intro: {
+          title: 'Welcome! Home row',
+          text: 'Rest your fingers on the home row: left hand on A S D F, right hand on J K L ;. Feel the little bumps on F and J. Thumbs rest on the space bar.',
+          keys: 'asdfjkl; ',
+        },
         grid: 1,
         windowMs: 150,
         pool: HOME_CORE,
@@ -103,6 +117,11 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l3',
         name: 'Gliding',
+        intro: {
+          title: 'New keys: G and H',
+          text: 'G and H sit between your index fingers. Reach sideways, then drift back home.',
+          keys: 'gh',
+        },
         grid: 1,
         windowMs: 135,
         pool: HOME,
@@ -171,6 +190,11 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's2l1',
         name: 'Reaching Up',
+        intro: {
+          title: 'New keys: the top row',
+          text: 'Q W E R T Y U I O P sit just above the home row. Reach up from home and come back.',
+          keys: 'qwertyuiop',
+        },
         tip: 'Tip: reach up from the home row and come back. Left hand takes Q to T, right hand takes Y to P.',
         grid: 1,
         windowMs: 150,
@@ -249,7 +273,7 @@ export const SECTIONS: SectionDef[] = [
   {
     id: 's3',
     name: 'Everything',
-    blurb: 'Capitals, commas and a long night of play.',
+    blurb: 'The bottom row, capitals and punctuation, one at a time.',
     bpm: 90,
     music: { rootMidi: 57, scale: MINOR, progression: [0, 5, 2, 6], seed: 37 },
     theme: {
@@ -265,77 +289,95 @@ export const SECTIONS: SectionDef[] = [
     levels: [
       {
         id: 's3l1',
-        name: 'Moonlight',
-        tip: "Tip: for capitals, many typists hold Shift with the other hand's little finger.",
+        name: 'Bottom Row',
+        intro: {
+          title: 'New keys: the bottom row',
+          text: 'Z X C V B N M sit just below the home row. Reach down from home and come back.',
+          keys: 'zxcvbnm',
+        },
         grid: 1,
         windowMs: 150,
-        pool: EVERYTHING,
+        pool: LOWER_SP,
         lines: [
-          'Mochi is a cozy cat.',
-          'She loves to play by the window.',
-          'The moon is bright tonight.',
+          'mochi blinks and watches the moon',
+          'a lazy breeze moves the curtain',
+          'a box of yarn sits next to her bowl',
         ],
       },
       {
         id: 's3l2',
-        name: 'Big Eyes',
-        tip: 'Tip: comma and period sit just below K and L.',
+        name: 'Night Moves',
         grid: 1,
         windowMs: 145,
-        pool: EVERYTHING,
+        pool: LOWER_SP,
         lines: [
-          'A tiny toy swings back and forth.',
-          'Mochi watches it with big eyes.',
-          'Soon the room is warm and quiet.',
+          'she jumps from the couch with a quick hop',
+          'the yarn rolls behind the cozy armchair',
+          'mochi crawls under and grabs it with a paw',
         ],
       },
       {
         id: 's3l3',
-        name: 'Pounce',
+        name: 'Capitals',
+        intro: {
+          title: 'New: capital letters',
+          text: 'Hold Shift and press the letter. Many typists use the Shift on the opposite side from the letter, but use whatever feels right.',
+          keys: '⇧',
+        },
         grid: 1,
-        windowMs: 135,
-        pool: EVERYTHING,
+        windowMs: 140,
+        pool: CAPS,
         lines: [
-          'Tonight the toy feels different.',
-          'It swings a little faster, a little higher.',
-          'Mochi crouches, wiggles, and waits.',
+          'Mochi carries the yarn to Biscuit',
+          'Biscuit is a sleepy old dog from Oslo',
+          'He opens one eye and wags at Mochi',
         ],
       },
       {
         id: 's3l4',
-        name: 'Follow the String',
+        name: 'Full Stops',
+        intro: {
+          title: 'New: period and comma',
+          text: 'The period and comma sit just below L and K. A comma is a little pause; a period ends the sentence.',
+          keys: '.,',
+        },
         grid: 1,
-        windowMs: 130,
-        pool: EVERYTHING,
+        windowMs: 135,
+        pool: STOPS,
         lines: [
-          'Then she jumps, but the toy is gone!',
-          'Quick, quick, follow that string.',
-          'Down the hall, under the chair, round the rug.',
+          'Biscuit yawns, stretches, and sits up.',
+          'Mochi drops the yarn by his nose.',
+          'He sniffs it, sneezes, and grins.',
         ],
       },
       {
         id: 's3l5',
+        name: 'Question Marks',
+        intro: {
+          title: "New: ' \" ? ! ; :",
+          text: 'Apostrophe and quotes share a key next to ;. Question mark is Shift + /, colon is Shift + ;, and ! is Shift + 1.',
+          keys: '\'";/1',
+        },
+        grid: 1,
+        windowMs: 130,
+        pool: EVERYTHING,
+        lines: [
+          '"Do you want to play?" asks Mochi.',
+          'Biscuit says: "I\'m too old; but yes!"',
+          'They chase the yarn; it\'s a good night!',
+        ],
+      },
+      {
+        id: 's3l6',
         name: 'Midnight Zoomies',
         tip: "Tip: short breaks between levels help more than you'd think. Stretch those paws.",
         grid: 2,
         windowMs: 115,
         pool: EVERYTHING,
         lines: [
-          'Mochi dashes across the kitchen floor.',
-          'Her paws skid on the cool, smooth tiles.',
-          'The toy bounces behind the old armchair.',
-        ],
-      },
-      {
-        id: 's3l6',
-        name: 'Curled Up',
-        grid: 2,
-        windowMs: 110,
-        pool: EVERYTHING,
-        lines: [
-          'She squeezes through, wiggling her tail.',
-          'At last, the toy is hers again.',
-          'Purring, Mochi curls up and falls asleep.',
+          'Round and round the room they run, laughing.',
+          'The yarn unwinds across the moonlit floor.',
+          'At last they curl up, tangled and happy.',
         ],
       },
     ],

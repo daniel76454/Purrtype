@@ -1,5 +1,5 @@
 import { Emitter } from './events.js';
-import type { SaveData } from './types.js';
+import type { Outfit, SaveData } from './types.js';
 
 const KEY = 'purrtype.save';
 
@@ -16,18 +16,39 @@ export function defaultSave(): SaveData {
       reducedMotion: false,
       audioOffsetMs: 0,
       keyboardGuide: 'auto',
+      menuMusic: true,
       playerName: '',
     },
     yarn: 0,
     progress: {},
-    owned: ['hat.none', 'collar.none', 'toy.yarn', 'fur.orange', 'decor.none'],
+    owned: ['hat.none', 'collar.none', 'toy.yarn', 'fur.orange', 'room.night'],
     equipped: {
       hat: 'hat.none',
       collar: 'collar.none',
       toy: 'toy.yarn',
       fur: 'fur.orange',
-      decor: 'decor.none',
+      room: 'room.night',
+      decor: [],
     },
+  };
+}
+
+/**
+ * Fill in anything a save is missing and upgrade old formats (used for local and cloud saves).
+ * Older saves stored one decor item as a string ('decor.none' meant nothing).
+ */
+export function normalizeSave(raw: unknown): SaveData {
+  const p = (raw ?? {}) as Partial<SaveData> & { equipped?: Partial<Outfit> & { decor?: string | string[] } };
+  const d = defaultSave();
+  const oldDecor = p.equipped?.decor;
+  const decor = Array.isArray(oldDecor) ? oldDecor : oldDecor && oldDecor !== 'decor.none' ? [oldDecor] : [];
+  return {
+    ...d,
+    ...p,
+    settings: { ...d.settings, ...p.settings },
+    equipped: { ...d.equipped, ...p.equipped, decor },
+    progress: p.progress ?? {},
+    owned: Array.from(new Set([...d.owned, ...(p.owned ?? [])])).filter((id) => id !== 'decor.none'),
   };
 }
 
@@ -44,16 +65,7 @@ class Store extends Emitter<{ change: void }> {
     try {
       const raw = localStorage.getItem(KEY);
       if (!raw) return;
-      const p = JSON.parse(raw) as Partial<SaveData>;
-      const d = defaultSave();
-      this.data = {
-        ...d,
-        ...p,
-        settings: { ...d.settings, ...p.settings },
-        equipped: { ...d.equipped, ...p.equipped },
-        progress: p.progress ?? {},
-        owned: Array.from(new Set([...d.owned, ...(p.owned ?? [])])),
-      };
+      this.data = normalizeSave(JSON.parse(raw));
     } catch {
       /* corrupt or unavailable storage: keep defaults */
     }

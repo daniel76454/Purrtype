@@ -5,6 +5,7 @@ import { audio } from '../audio/engine.js';
 import { sfx } from '../audio/sfx.js';
 import { button, header, slider, toggle } from './ui.js';
 import { openCalibration } from './calibrate.js';
+import { menuMusic } from '../audio/menuMusic.js';
 import { cloud } from '../cloud/cloud.js';
 import { cleanNickname, NAME_MAX } from '../core/names.js';
 import { MenuScreen } from './menu.js';
@@ -37,6 +38,7 @@ function nameField(value: string, onChange: (v: string) => void): HTMLElement {
 }
 
 export class SettingsScreen implements Screen {
+  readonly menuMusic = true;
   constructor(private nav: Navigator) {}
 
   mount(root: HTMLElement): void {
@@ -61,15 +63,26 @@ export class SettingsScreen implements Screen {
           slider('Master volume', s.master, 0, 1, 0.01, pct, (v) => set(() => (s.master = v))),
           slider('Music', s.music, 0, 1, 0.01, pct, (v) => set(() => (s.music = v))),
           slider('Effects', s.sfx, 0, 1, 0.01, pct, (v) => set(() => (s.sfx = v))),
+          toggle('Menu music', s.menuMusic, (v) => {
+            set(() => (s.menuMusic = v));
+            menuMusic.set(v);
+          }),
           button('Test sound', () => sfx.hit('perfect', 10), 'small'),
           h('h3', { text: 'Rhythm' }),
           toggle('Metronome click', s.metronome, (v) => set(() => (s.metronome = v))),
           toggle('Show beat guide', s.beatGuide, (v) => set(() => (s.beatGuide = v))),
-          button('Calibrate timing (tap along)', () => openCalibration(root, () => this.nav.go(new SettingsScreen(this.nav))), 'small primary'),
+          button(
+            'Calibrate timing (tap along)',
+            () => {
+              menuMusic.set(false); // the clicks need silence
+              openCalibration(root, () => this.nav.go(new SettingsScreen(this.nav)));
+            },
+            'small primary',
+          ),
           slider('Audio offset', s.audioOffsetMs, -250, 250, 5, (v) => `${v > 0 ? '+' : ''}${v} ms`, (v) => set(() => (s.audioOffsetMs = v))),
           h('p', { class: 'hint', text: 'Calibrate once per device (headphones change it). Fine-tune by hand: if hits feel judged too early, raise the offset; if too late, lower it.' }),
           h('h3', { text: 'Typing help' }),
-          choice('Keyboard guide', s.keyboardGuide, [['auto', 'Home Row only'], ['on', 'Always'], ['off', 'Off']], (v) => set(() => (s.keyboardGuide = v as typeof s.keyboardGuide))),
+          choice('Keyboard guide', s.keyboardGuide, [['auto', 'When keys are new'], ['on', 'Always'], ['off', 'Off']], (v) => set(() => (s.keyboardGuide = v as typeof s.keyboardGuide))),
           cloud.enabled ? h('h3', { text: 'Leaderboards' }) : null,
           cloud.enabled ? nameField(s.playerName, (v) => {
             set(() => (s.playerName = v));

@@ -1,5 +1,8 @@
+import { QUOTES } from '../data/quotes.js';
+
 /**
- * Practice mode (pure): free typing with no rhythm and no hearts, like a typing race (~80 words).
+ * Practice mode (pure): free typing with no rhythm and no hearts, like a typing race (~80 words
+ * of famous public-domain quotes, or a cozy story).
  *
  *  - Mistakes must be fixed with Backspace before you can move on (Ctrl+Backspace deletes a word).
  *  - A word typed with no mistakes adds to the combo; the first mistake in a word resets it.
@@ -66,25 +69,20 @@ function mulberry32(a: number) {
   };
 }
 
-/** A shuffled little story of about `words` words, split into short lines (the engine works line by line). */
-export function generatePractice(seed: number, words = 80): string[] {
-  const rnd = mulberry32(seed);
-  const pool = [...SENTENCES];
-  for (let i = pool.length - 1; i > 0; i--) {
+function shuffle<T>(items: T[], rnd: () => number): T[] {
+  const out = [...items];
+  for (let i = out.length - 1; i > 0; i--) {
     const j = Math.floor(rnd() * (i + 1));
-    [pool[i], pool[j]] = [pool[j]!, pool[i]!];
+    [out[i], out[j]] = [out[j]!, out[i]!];
   }
-  const out: string[] = [];
-  let count = 0;
-  for (const s of pool) {
-    if (count >= words) break;
-    out.push(...s.split(' '));
-    count = out.length;
-  }
-  // wrap
+  return out;
+}
+
+/** Split text into short lines (the engine works line by line; the screen shows it as a paragraph). */
+function wrap(words: string[]): string[] {
   const lines: string[] = [];
   let cur = '';
-  for (const w of out) {
+  for (const w of words) {
     if (cur && cur.length + 1 + w.length > MAX_LINE) {
       lines.push(cur);
       cur = w;
@@ -92,6 +90,50 @@ export function generatePractice(seed: number, words = 80): string[] {
   }
   if (cur) lines.push(cur);
   return lines;
+}
+
+/**
+ * Pick whole passages, in shuffled order, until the text is about `target` words long.
+ * Passages that would overshoot `max` are skipped.
+ */
+function pick<T>(items: T[], words: (t: T) => number, rnd: () => number, target: number, max: number): T[] {
+  const chosen: T[] = [];
+  let count = 0;
+  for (const it of shuffle(items, rnd)) {
+    if (count >= target) break;
+    const n = words(it);
+    if (count + n > max) continue;
+    chosen.push(it);
+    count += n;
+  }
+  return chosen;
+}
+
+const wordCount = (s: string) => s.split(' ').length;
+
+/** A shuffled little cozy story of about `words` words. */
+export function generatePractice(seed: number, words = 80): string[] {
+  const rnd = mulberry32(seed);
+  return wrap(pick(SENTENCES, wordCount, rnd, words, words + 15).join(' ').split(' '));
+}
+
+export interface PracticeText {
+  kind: 'story' | 'quotes';
+  lines: string[];
+  /** Where the quotes come from, in order (quotes only). */
+  sources: string[];
+}
+
+/** A practice text: usually a handful of famous public-domain quotes, sometimes a cozy story. */
+export function practiceText(seed: number, words = 80): PracticeText {
+  const rnd = mulberry32(seed);
+  if (rnd() < 0.3) return { kind: 'story', lines: generatePractice(seed + 1, words), sources: [] };
+  const chosen = pick(QUOTES, (q) => wordCount(q.text), rnd, words, words + 15);
+  return {
+    kind: 'quotes',
+    lines: wrap(chosen.map((q) => q.text).join(' ').split(' ')),
+    sources: chosen.map((q) => q.source),
+  };
 }
 
 // ---- scoring ---------------------------------------------------------------------------

@@ -67,7 +67,42 @@ export class PlayScreen implements Screen {
 
     this.build(root);
     window.addEventListener('keydown', this.onKey);
-    void this.begin();
+    const intro = this.level.intro;
+    const cleared = (store.data.progress[this.level.id]?.stars ?? 0) > 0;
+    if (intro && !cleared) this.showIntro(intro);
+    else void this.begin();
+  }
+
+  /** A short card about the level's new keys, with the keyboard showing where they are. Space starts. */
+  private showIntro(intro: NonNullable<LevelDef['intro']>): void {
+    const kb = new KeyboardGuide(false);
+    kb.spotlight(intro.keys);
+    const start = () => {
+      window.removeEventListener('keydown', onKey);
+      overlay.remove();
+      if (!this.disposed) void this.begin();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        start();
+      }
+    };
+    const overlay = h(
+      'div',
+      { class: 'overlay' },
+      h(
+        'div',
+        { class: 'panel dialog intro-card' },
+        h('h2', { text: intro.title }),
+        h('p', { class: 'hint', text: intro.text }),
+        kb.el,
+        button('Start (space)', start, 'primary'),
+      ),
+    );
+    this.root.append(overlay);
+    window.addEventListener('keydown', onKey);
+    this.offs.push(() => window.removeEventListener('keydown', onKey));
   }
 
   unmount(): void {
@@ -101,7 +136,8 @@ export class PlayScreen implements Screen {
     const rhythmHint =
       this.level.grid === 2 ? 'double time: a letter each time the knob reaches an end' : 'type a letter each time the knob reaches an end · finish every word with space';
     const kb = store.data.settings.keyboardGuide;
-    if (kb === 'on' || (kb === 'auto' && this.section.id === 's1')) this.keyboard = new KeyboardGuide(true);
+    // auto: the whole first section, and any level that brings in new keys
+    if (kb === 'on' || (kb === 'auto' && (this.section.id === 's1' || !!this.level.intro))) this.keyboard = new KeyboardGuide(true);
     // with the keyboard showing, the holographic hands do the explaining: no text line
     const hintText = this.keyboard ? '' : this.level.tip && !cleared ? this.level.tip : first ? rhythmHint : '';
     const hint = hintText ? h('div', { class: 'type-hint', text: hintText }) : null;

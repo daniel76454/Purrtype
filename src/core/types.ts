@@ -2,9 +2,12 @@ export type Grade = 'perfect' | 'good' | 'off';
 export type Layer = 'melody' | 'pad' | 'bass' | 'drums';
 export const LAYERS: Layer[] = ['melody', 'pad', 'bass', 'drums'];
 
-export type Category = 'hat' | 'collar' | 'toy' | 'fur' | 'decor';
-export const CATEGORIES: Category[] = ['hat', 'collar', 'toy', 'fur', 'decor'];
-export type Outfit = Record<Category, string>;
+export type Category = 'fur' | 'hat' | 'collar' | 'toy' | 'room' | 'decor';
+export const CATEGORIES: Category[] = ['fur', 'hat', 'collar', 'toy', 'room', 'decor'];
+/** Categories where exactly one item is worn or used at a time. */
+export type SingleCategory = Exclude<Category, 'decor'>;
+/** What the cat wears and the room looks like. Decor is additive: any number of items at once. */
+export type Outfit = Record<SingleCategory, string> & { decor: string[] };
 
 export interface Settings {
   master: number; // 0..1
@@ -14,8 +17,10 @@ export interface Settings {
   beatGuide: boolean; // visual beat pips in the typing panel
   reducedMotion: boolean;
   audioOffsetMs: number; // latency compensation, positive = player hears late
-  /** On-screen keyboard with finger hints: 'auto' shows it in the Home Row section only. */
+  /** On-screen keyboard with finger hints: 'auto' shows it on Home Row and whenever a level brings in new keys. */
   keyboardGuide: 'auto' | 'on' | 'off';
+  /** Background music on the menu screens. */
+  menuMusic: boolean;
   /** Name shown on leaderboards (chosen by the player; never taken from their Google account). */
   playerName: string;
 }

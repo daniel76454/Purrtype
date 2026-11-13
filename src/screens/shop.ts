@@ -1,7 +1,7 @@
 import { h } from '../core/dom.js';
 import type { Navigator, Screen } from '../core/screens.js';
 import { store } from '../core/storage.js';
-import { CATEGORIES, type Category } from '../core/types.js';
+import { CATEGORIES, type Category, type Outfit } from '../core/types.js';
 import { CATEGORY_LABELS, itemsIn, type ShopItem } from '../data/shop.js';
 import { sfx } from '../audio/sfx.js';
 import { header, icon } from './ui.js';
@@ -10,7 +10,8 @@ import { MenuScreen } from './menu.js';
 
 /** The cat in the background is the live preview: clicking an item tries it on. */
 export class ShopScreen implements Screen {
-  private tab: Category = 'hat';
+  readonly menuMusic = true;
+  private tab: Category = 'fur';
   private body!: HTMLElement;
   private unsub?: () => void;
 
@@ -41,7 +42,7 @@ export class ShopScreen implements Screen {
         'div',
         { class: 'screen left' },
         header('Shop', () => this.nav.go(new MenuScreen(this.nav))),
-        h('div', { class: 'panel' }, tabs, this.body, h('p', { class: 'hint', text: 'Click an item to try it on the cat.' })),
+        h('div', { class: 'panel' }, tabs, this.body, h('p', { class: 'hint', text: 'Click an item to preview it. Decor adds up: place as many pieces as you like.' })),
       ),
     );
     this.applyEquipped();
@@ -53,8 +54,10 @@ export class ShopScreen implements Screen {
     this.unsub?.();
   }
 
+  /** Show what's actually equipped (copying the decor list so previews can't change the save). */
   private applyEquipped(): void {
-    this.nav.scene.outfit = { ...store.data.equipped };
+    const e = store.data.equipped;
+    this.nav.scene.outfit = { ...e, decor: [...e.decor] };
   }
 
   private render(): void {
@@ -62,30 +65,46 @@ export class ShopScreen implements Screen {
     for (const item of itemsIn(this.tab)) this.body.append(this.card(item));
   }
 
+  /** Is this item in use: worn, or (for decor) placed in the room? */
+  private inUse(item: ShopItem, outfit = store.data.equipped): boolean {
+    return item.category === 'decor' ? outfit.decor.includes(item.id) : outfit[item.category] === item.id;
+  }
+
+  /** Wear/place an item in a save's outfit. Decor toggles in and out; everything else swaps. */
+  private use(item: ShopItem, outfit: Outfit): void {
+    if (item.category !== 'decor') outfit[item.category] = item.id;
+    else if (outfit.decor.includes(item.id)) outfit.decor = outfit.decor.filter((d) => d !== item.id);
+    else outfit.decor = [...outfit.decor, item.id];
+  }
+
   private card(item: ShopItem): HTMLElement {
     const d = store.data;
     const owned = d.owned.includes(item.id);
-    const equipped = d.equipped[item.category] === item.id;
-    const trying = this.nav.scene.outfit[item.category] === item.id;
+    const inUse = this.inUse(item);
+    const decor = item.category === 'decor';
+    const trying = this.inUse(item, this.nav.scene.outfit) && !inUse;
     const affordable = d.yarn >= item.price;
+    // worn items can't be "unequipped" (pick another instead); decor can be removed
+    const label = !owned ? undefined : decor ? (inUse ? 'Remove' : 'Place') : inUse ? 'Equipped' : 'Equip';
+    const disabled = (!decor && inUse) || (!owned && !affordable);
 
     const action = h(
       'button',
       {
-        class: `btn small ${equipped ? 'ghost' : 'primary'}`,
-        text: equipped ? 'Equipped' : owned ? 'Equip' : undefined,
-        attrs: equipped || (!owned && !affordable) ? { disabled: 'true' } : {},
+        class: `btn small ${(!decor && inUse) || (decor && inUse) ? 'ghost' : 'primary'}`,
+        text: label,
+        attrs: disabled ? { disabled: 'true' } : {},
         on: {
           click: (e: Event) => {
             e.stopPropagation();
             if (owned) {
-              store.update((s) => (s.equipped[item.category] = item.id));
+              store.update((s) => this.use(item, s.equipped));
               sfx.click();
             } else if (affordable) {
               store.update((s) => {
                 s.yarn -= item.price;
                 s.owned.push(item.id);
-                s.equipped[item.category] = item.id;
+                if (!this.inUse(item, s.equipped)) this.use(item, s.equipped);
               });
               sfx.buy();
             }
@@ -93,16 +112,19 @@ export class ShopScreen implements Screen {
           },
         },
       },
-      ...(equipped || owned ? [] : [icon('yarn'), ` ${item.price}`]),
+      ...(owned ? [] : [icon('yarn'), ` ${item.price}`]),
     );
 
     return h(
       'div',
       {
-        class: `item ${trying ? 'trying' : ''}`,
+        class: `item ${trying || (!decor && this.inUse(item, this.nav.scene.outfit) && !inUse) ? 'trying' : ''} ${inUse ? 'in-use' : ''}`,
         on: {
           click: () => {
-            this.nav.scene.outfit = { ...store.data.equipped, [item.category]: item.id };
+            // preview: try it on (or, for decor, see the room with it toggled)
+            const preview = { ...store.data.equipped, decor: [...store.data.equipped.decor] };
+            if (!(decor ? false : inUse)) this.use(item, preview);
+            this.nav.scene.outfit = preview;
             sfx.click();
             this.render();
           },

@@ -8,6 +8,7 @@ import { MenuScreen } from './menu.js';
 import { PlayScreen } from './play.js';
 
 export class LevelSelectScreen implements Screen {
+  readonly menuMusic = true;
   constructor(private nav: Navigator) {}
 
   mount(root: HTMLElement): void {
