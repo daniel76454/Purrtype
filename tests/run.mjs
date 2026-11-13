@@ -95,14 +95,14 @@ test('typing: lines advance and the level finishes', () => {
   assert.equal(o.lineDone, true);
   assert.equal(o.wordDone, true);
   assert.equal(e.line, 1);
-  e.handleKey('c');
-  const last = e.handleKey(' ');
-  assert.equal(last.finished, true);
+  const last = e.handleKey('c');
+  assert.equal(last.finished, true, 'the text ends on its last letter, no closing space');
+  assert.equal(last.wordDone, true);
   assert.equal(e.handleKey('d').kind, 'ignored');
 });
 
 test('typing: the last word of a line is finished by space, and can be missed', () => {
-  const e = new TypingEngine(['ab']);
+  const e = new TypingEngine(['ab', 'c']);
   e.handleKey('a');
   e.handleKey('b');
   const o = e.handleKey('x'); // forgot the space
@@ -130,8 +130,8 @@ test('session: on-beat typing builds combo and score, no hearts lost', () => {
   const s = mk(['abcdefghij']);
   let result;
   s.on('finished', (r) => (result = r));
-  typeOnBeat(s, 'abcdefghij ');
-  assert.equal(s.combo, 11);
+  typeOnBeat(s, 'abcdefghij');
+  assert.equal(s.combo, 10);
   assert.equal(s.hearts, HEARTS);
   assert.equal(result.completed, true);
   assert.equal(result.stars, 3);
@@ -271,21 +271,21 @@ test('practice: mistakes block progress until fixed with backspace', () => {
 
 test('practice: clean words build the combo, finishing gives wpm, accuracy and score', () => {
   const e = new PracticeEngine(['ab cd', 'ef']);
-  // 12 seconds for "ab cd ef " (9 chars) with one mistake
+  // 12 seconds for "ab cd ef" (8 chars) with one mistake
   [...'ab cd '].forEach((k, i) => e.key(k, i * 1000));
   assert.equal(e.combo, 2);
   e.key('x', 6000);
   e.backspace();
   e.key('e', 7000);
-  e.key('f', 8000);
-  e.key(' ', 12000);
+  const end = e.key('f', 12000);
+  assert.deepEqual(end, { kind: 'word', clean: false }, 'the last letter finishes the text');
   assert.equal(e.finished, true);
   const r = e.result();
   assert.equal(r.seconds, 12);
-  assert.equal(r.wpm, 9); // 9 chars / 5 / 0.2 min
+  assert.equal(r.wpm, 8); // "ab cd ef" = 8 chars / 5 / 0.2 min
   assert.equal(r.errors, 1);
-  assert.ok(Math.abs(r.accuracy - 9 / 10) < 1e-9);
-  assert.equal(r.score, practiceScore(9, 0.9));
+  assert.ok(Math.abs(r.accuracy - 8 / 9) < 1e-9);
+  assert.equal(r.score, practiceScore(8, 8 / 9));
   assert.equal(r.maxCombo, 2);
 });
 

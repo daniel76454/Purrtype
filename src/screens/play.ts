@@ -100,11 +100,11 @@ export class PlayScreen implements Screen {
     const first = /l1$/.test(this.level.id) || (/l5$/.test(this.level.id) && this.level.grid === 2);
     const rhythmHint =
       this.level.grid === 2 ? 'double time: a letter each time the knob reaches an end' : 'type a letter each time the knob reaches an end · finish every word with space';
-    const hintText = this.level.tip && !cleared ? this.level.tip : first ? rhythmHint : '';
-    const hint = hintText ? h('div', { class: 'type-hint', text: hintText }) : null;
-
     const kb = store.data.settings.keyboardGuide;
-    if (kb === 'on' || (kb === 'auto' && this.section.id === 's1')) this.keyboard = new KeyboardGuide();
+    if (kb === 'on' || (kb === 'auto' && this.section.id === 's1')) this.keyboard = new KeyboardGuide(true);
+    // with the keyboard showing, the holographic hands do the explaining: no text line
+    const hintText = this.keyboard ? '' : this.level.tip && !cleared ? this.level.tip : first ? rhythmHint : '';
+    const hint = hintText ? h('div', { class: 'type-hint', text: hintText }) : null;
     this.nav.scene.floorFrac = this.keyboard ? 0.5 : 0.6;
 
     this.panel = h('div', { class: 'typing panel' }, this.slider.el, this.curLine, this.nextLine, hint, this.keyboard?.el);
@@ -277,6 +277,7 @@ export class PlayScreen implements Screen {
     const e = this.session.engine;
     const text = e.lines[e.line] ?? '';
     this.chars = [...text].map((ch, i) => charSpan(ch, i === text.length - 1));
+
     this.curLine.replaceChildren(...this.chars);
     this.nextLine.replaceChildren(...[...(e.lines[e.line + 1] ?? '')].map((ch) => charSpan(ch)));
     if (slide) {
@@ -338,7 +339,7 @@ export class PlayScreen implements Screen {
     const next = nextLevel(r.levelId);
     const stat = (k: string, v: string | number) => h('div', { class: 'stat' }, h('span', { text: k }), h('b', { text: String(v) }));
     const buttons = [
-      r.completed && next && r.stars >= 1 ? button('Next level', () => this.nav.go(new PlayScreen(this.nav, next.section, next.level)), 'primary') : null,
+      r.completed && next ? button('Next level', () => this.nav.go(new PlayScreen(this.nav, next.section, next.level)), 'primary') : null,
       button('Retry', () => this.nav.go(new PlayScreen(this.nav, this.section, this.level)), r.completed ? '' : 'primary'),
       button('Levels', () => this.nav.go(new LevelSelectScreen(this.nav)), 'ghost'),
     ];

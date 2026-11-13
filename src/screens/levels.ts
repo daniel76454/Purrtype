@@ -1,13 +1,11 @@
 import { h } from '../core/dom.js';
 import type { Navigator, Screen } from '../core/screens.js';
 import { store } from '../core/storage.js';
-import { SECTIONS, isUnlocked } from '../data/sections.js';
+import { SECTIONS } from '../data/sections.js';
 import { sfx } from '../audio/sfx.js';
-import { header, icon, starRow } from './ui.js';
+import { header, starRow } from './ui.js';
 import { MenuScreen } from './menu.js';
 import { PlayScreen } from './play.js';
-
-const DEV = new URLSearchParams(location.search).has('dev');
 
 export class LevelSelectScreen implements Screen {
   constructor(private nav: Navigator) {}
@@ -19,12 +17,10 @@ export class LevelSelectScreen implements Screen {
     for (const section of SECTIONS) {
       const levels = section.levels.map((level, i) => {
         const p = progress[level.id];
-        const open = isUnlocked(level.id, progress, DEV);
         const card = h(
           'button',
           {
-            class: `level ${open ? '' : 'locked'}`,
-            attrs: open ? {} : { disabled: 'true' },
+            class: 'level',
             on: {
               click: () => {
                 sfx.click();
@@ -32,7 +28,7 @@ export class LevelSelectScreen implements Screen {
               },
             },
           },
-          open ? h('span', { class: 'num', text: String(i + 1) }) : h('span', { class: 'num' }, icon('lock')),
+          h('span', { class: 'num', text: String(i + 1) }),
           h('span', { class: 'name', text: level.name }),
           starRow(p?.stars ?? 0),
           h('span', { class: 'best', text: p ? `best ${p.bestScore}` : level.grid === 2 ? 'double time' : '' }),

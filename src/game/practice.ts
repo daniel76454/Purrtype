@@ -138,8 +138,8 @@ export class PracticeEngine {
   private wordDirty = false;
 
   constructor(lines: string[]) {
-    // every word, including the last one on a line, is finished with a space
-    this.lines = lines.map((l) => (l.endsWith(' ') ? l : `${l} `));
+    // every word is finished with a space, except the very last word of the text
+    this.lines = lines.map((l, i) => (i === lines.length - 1 ? l.trimEnd() : l.endsWith(' ') ? l : `${l} `));
   }
 
   get target(): string {
@@ -180,9 +180,10 @@ export class PracticeEngine {
       return { kind: 'typed', correct: false, firstErrorInWord: first };
     }
     this.correctKeystrokes++;
-    if (ch !== ' ') return { kind: 'typed', correct: true, firstErrorInWord: false };
+    const lastLetter = this.line === this.lines.length - 1 && this.typed === t;
+    if (ch !== ' ' && !lastLetter) return { kind: 'typed', correct: true, firstErrorInWord: false };
 
-    // a correct space completes a word
+    // a correct space (or the text's final letter) completes a word
     const clean = !this.wordDirty;
     this.wordDirty = false;
     this.wordsDone++;

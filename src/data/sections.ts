@@ -1,4 +1,4 @@
-import type { Layer, LevelProgress } from '../core/types.js';
+import type { Layer } from '../core/types.js';
 
 export interface MusicDef {
   rootMidi: number;
@@ -79,7 +79,6 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l1',
         name: 'Warm Up',
-        tip: 'Tip: rest your index fingers on F and J (feel the little bumps). The others settle on A S D and K L.',
         grid: 1,
         windowMs: 150,
         pool: HOME_CORE,
@@ -92,7 +91,6 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l2',
         name: 'First Steps',
-        tip: 'Tip: tap space with whichever thumb feels natural.',
         grid: 1,
         windowMs: 145,
         pool: HOME_CORE,
@@ -105,7 +103,6 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l3',
         name: 'Gliding',
-        tip: 'Tip: G and H are a small sideways reach for the index fingers. Then drift back home.',
         grid: 1,
         windowMs: 135,
         pool: HOME,
@@ -118,7 +115,6 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l4',
         name: 'Glad Flags',
-        tip: 'Tip: try keeping your eyes on the screen, not your hands. Your fingers know more than you think.',
         grid: 1,
         windowMs: 130,
         pool: HOME,
@@ -131,7 +127,6 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's1l5',
         name: 'Double Time',
-        tip: 'Tip: at double time, lighter taps are faster than harder ones. Stay loose.',
         grid: 2,
         windowMs: 115,
         pool: HOME,
@@ -189,6 +184,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's2l2',
         name: 'Rainy Window',
+        tip: 'Tip: try keeping your eyes on the screen, not your hands. Your fingers know more than you think.',
         grid: 1,
         windowMs: 145,
         pool: TOP,
@@ -226,6 +222,7 @@ export const SECTIONS: SectionDef[] = [
       {
         id: 's2l5',
         name: 'Quiet Day',
+        tip: 'Tip: at double time, lighter taps are faster than harder ones. Stay loose.',
         grid: 2,
         windowMs: 115,
         pool: TOP,
@@ -535,15 +532,6 @@ export function allLevels(): { section: SectionDef; level: LevelDef; index: numb
   const out: { section: SectionDef; level: LevelDef; index: number }[] = [];
   for (const section of SECTIONS) for (const level of section.levels) out.push({ section, level, index: out.length });
   return out;
-}
-
-export function isUnlocked(levelId: string, progress: Record<string, LevelProgress>, dev = false): boolean {
-  if (dev) return true;
-  const all = allLevels();
-  const i = all.findIndex((l) => l.level.id === levelId);
-  if (i <= 0) return i === 0;
-  const prev = all[i - 1]!.level.id;
-  return (progress[prev]?.stars ?? 0) >= 1;
 }
 
 export function nextLevel(levelId: string) {

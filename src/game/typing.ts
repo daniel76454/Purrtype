@@ -5,7 +5,7 @@ export type KeyOutcome =
       char: string;
       line: number;
       index: number;
-      /** This key finished a word (always a space). */
+      /** This key finished a word (a space, or the last letter of the text). */
       wordDone: boolean;
       /** The word was already missed, so this key is typed "for free". */
       inMissedWord: boolean;
@@ -16,8 +16,8 @@ export type KeyOutcome =
 
 /**
  * Cursor and word-miss rules. No timing, no scoring.
- *  - Every line ends with a space, so every word (including the last one on a line) is finished
- *    by pressing space. A word ends at its space, and the space belongs to that word.
+ *  - Every line except the last ends with a space, so every word is finished by pressing space,
+ *    except the very last word of the text. A word ends at its space, and the space belongs to it.
  *  - The first wrong key in a word marks the word as missed.
  *  - Wrong keys never advance the cursor; the player must type the correct key.
  */
@@ -32,7 +32,8 @@ export class TypingEngine {
   readonly lines: string[];
 
   constructor(lines: string[]) {
-    this.lines = lines.map((l) => (l.endsWith(' ') ? l : `${l} `));
+    // every line but the last needs a closing space; the text itself ends on its last letter
+    this.lines = lines.map((l, i) => (i === lines.length - 1 ? l.trimEnd() : l.endsWith(' ') ? l : `${l} `));
   }
 
   get total(): number {
@@ -64,7 +65,7 @@ export class TypingEngine {
       return { kind: 'wrong', char: key, expected, line, index, firstMiss };
     }
 
-    const wordDone = key === ' ';
+    const wordDone = key === ' ' || (line === this.lines.length - 1 && index === s.length - 1);
     const inMissedWord = this.wordMissed;
     if (wordDone) this.wordMissed = false;
 

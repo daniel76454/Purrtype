@@ -23,7 +23,7 @@ Menu → Level select → Level → Results (yarn + stars) → Shop (spend yarn)
 
 * **Currency:** *yarn*, earned at the end of a level (`score / 200`). A failed level pays out a reduced amount.
 * **Hearts:** 5 per level. A level fails at 0 hearts.
-* **Unlocking:** a level opens when the previous one has at least 1 star. Add `?dev=1` to the URL to unlock everything.
+* **Levels are all open:** players can pick any level; stars just record how well each one went.
 
 ### Sections and levels
 * A **section** has one BPM, one musical key and one theme (colours).
@@ -47,7 +47,7 @@ Menu → Level select → Level → Results (yarn + stars) → Shop (spend yarn)
 * **Layout in play:** the room's floor is raised, and the typing panel sits on it at the bottom of the screen, so the whole room and the cat stay visible above it.
 * **Cloud (optional):** Google sign-in syncs saves and enables per-level leaderboards via Firebase. See [CLOUD.md](CLOUD.md).
 * **Practice mode** (`src/game/practice.ts`, `src/screens/practice.ts`): free typing, no rhythm, like a typing race. A shuffled ~80-word cozy story, shown in full in a big panel at the top (the room and cat stay visible below); mistakes must be fixed with Backspace (Ctrl+Backspace deletes a word; you can't delete into a finished word). No hearts, and the music never thins. Clean words build the combo; the first mistake in a word resets it and sends the toy flying, and 3 clean words bring it back. Results: WPM (5 characters = 1 word), accuracy (correct keystrokes / all keystrokes), time, mistakes, best combo, and a score of `wpm × accuracy³ × 10`. Best score, WPM and accuracy are saved under `progress.practice` (synced) and posted to the `practice` leaderboard.
-* **Typing help:** most levels in the first sections carry one short, optional `tip` (finger placement, posture, a reminder that comfort beats rules), shown until the level is first cleared. An on-screen keyboard (`src/screens/keyboard.ts`) highlights the next key, tints keys by finger and marks the F/J bumps. Settings → Keyboard guide: *Home Row only* (default), *Always* or *Off*.
+* **Typing help:** levels from Top Row on carry one short, optional `tip` (finger placement, posture, a reminder that comfort beats rules), shown until the level is first cleared. An on-screen keyboard (`src/screens/keyboard.ts`) highlights the next key, tints keys by finger and marks the F/J bumps. Two holographic hands rest on the home row over it; the finger for the next key reaches over and lights up (both thumbs for space). While the keyboard shows, the text tip line is hidden. It appears on the Home Row levels only, so players later settle into whatever feels comfortable. Settings → Keyboard guide: *Home Row only* (default), *Always* or *Off*.
 * **Timing:** the visuals and the judge both convert times with one function (`heardAt` in `src/audio/engine.ts`), so they can't drift apart. Device latency (speakers, Bluetooth) is measured by **Settings → Calibrate timing**: 16 clicks, tap along, and the median delay becomes the audio offset (`src/game/calibrate.ts`).
 * A key press is converted to **audio-clock time** (`audio.keyTimeToCtx`), which uses `getOutputTimestamp()` so what the player *hears* is what is judged. The player can correct for device latency with the **audio offset** setting.
 * `judgeTiming()` (`src/game/beat.ts`):

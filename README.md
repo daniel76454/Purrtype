@@ -14,7 +14,6 @@ npm run serve      # http://localhost:8080
 
 ES modules need a web server, so opening `index.html` straight from disk won't work. Any static server is fine.
 
-Useful URL flag: `?dev=1` unlocks every level.
 In the browser console, `purrtype.nav`, `purrtype.scene` and `purrtype.store` are exposed for poking at things.
 
 ## Publish and cloud saves

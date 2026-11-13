@@ -52,7 +52,7 @@ export class PracticeScreen implements Screen {
     scene.combo = 0;
     scene.heartsFrac = 1;
     scene.reducedMotion = store.data.settings.reducedMotion;
-    if (store.data.settings.keyboardGuide === 'on') this.keyboard = new KeyboardGuide();
+    if (store.data.settings.keyboardGuide === 'on') this.keyboard = new KeyboardGuide(true);
     scene.floorFrac = 0.8; // the text sits at the top here, so the room keeps its normal floor
 
     this.wpmEl = h('b', { text: '0' });
