@@ -36,6 +36,8 @@ export class PlayScreen implements Screen {
   private panel!: HTMLElement;
   private curLine!: HTMLElement;
   private nextLine!: HTMLElement;
+  /** The line after next: small and faint, a hint that more is coming. */
+  private laterLine!: HTMLElement;
   private chars: HTMLElement[] = [];
   private grades: CharClass[][] = [];
   private hearts: HTMLElement[] = [];
@@ -122,6 +124,7 @@ export class PlayScreen implements Screen {
     this.multEl = h('div', { class: 'mult', text: '×1' });
     this.curLine = h('div', { class: 'line current' });
     this.nextLine = h('div', { class: 'line next' });
+    this.laterLine = h('div', { class: 'line later' });
     this.feedback = h('div', { class: 'feedback' });
     this.banner = h('div', { class: 'banner', text: '' });
     const win = timingWindows(this.section.bpm, this.level.grid, this.level.windowMs);
@@ -143,7 +146,7 @@ export class PlayScreen implements Screen {
     const hint = hintText ? h('div', { class: 'type-hint', text: hintText }) : null;
     this.nav.scene.floorFrac = this.keyboard ? 0.5 : 0.6;
 
-    this.panel = h('div', { class: 'typing panel' }, this.slider.el, this.curLine, this.nextLine, hint, this.keyboard?.el);
+    this.panel = h('div', { class: 'typing panel' }, this.slider.el, this.curLine, this.nextLine, this.laterLine, hint, this.keyboard?.el);
     root.append(
       h(
         'div',
@@ -316,6 +319,7 @@ export class PlayScreen implements Screen {
 
     this.curLine.replaceChildren(...this.chars);
     this.nextLine.replaceChildren(...[...(e.lines[e.line + 1] ?? '')].map((ch) => charSpan(ch)));
+    this.laterLine.textContent = e.lines[e.line + 2]?.trimEnd() ?? '';
     if (slide) {
       this.curLine.classList.remove('slide');
       void this.curLine.offsetWidth;

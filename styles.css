@@ -158,6 +158,7 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
 .line.current { font-size: 27px; font-weight: 500; line-height: 1.5; min-height: 1.5em; }
 .line.current.slide { animation: slide 0.2s steps(4); }
 .line.next { font-size: 27px; font-weight: 500; line-height: 1.5; color: #b4a9d6; margin-top: 2px; min-height: 1.5em; overflow: hidden; }
+.line.later { font-size: 18px; line-height: 1.5; color: #b4a9d6; opacity: 0.45; min-height: 1.5em; overflow: hidden; }
 .ch { display: inline-block; position: relative; }
 .ch.pending { color: #d4c8ea; }
 .ch.perfect { color: var(--perfect); }
@@ -213,6 +214,7 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
   .title h1 { font-size: 56px; }
   .line.current { font-size: 18px; }
   .line.next { font-size: 18px; }
+  .line.later { font-size: 13px; }
 }
 
 /* pixel icons (generated: 1 SVG rect per pixel) */
