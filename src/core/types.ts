@@ -1,0 +1,32 @@
+export type Grade = 'perfect' | 'good' | 'off';
+export type Layer = 'melody' | 'pad' | 'bass' | 'drums';
+export const LAYERS: Layer[] = ['melody', 'pad', 'bass', 'drums'];
+
+export type Category = 'hat' | 'collar' | 'toy' | 'fur' | 'decor';
+export const CATEGORIES: Category[] = ['hat', 'collar', 'toy', 'fur', 'decor'];
+export type Outfit = Record<Category, string>;
+
+export interface Settings {
+  master: number; // 0..1
+  music: number;
+  sfx: number;
+  metronome: boolean; // audible click on every beat
+  beatGuide: boolean; // visual beat pips in the typing panel
+  reducedMotion: boolean;
+  audioOffsetMs: number; // latency compensation, positive = player hears late
+}
+
+export interface LevelProgress {
+  stars: number;
+  bestScore: number;
+  bestCombo: number;
+}
+
+export interface SaveData {
+  version: number;
+  settings: Settings;
+  yarn: number;
+  progress: Record<string, LevelProgress>;
+  owned: string[];
+  equipped: Outfit;
+}
