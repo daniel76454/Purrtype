@@ -1,5 +1,5 @@
 /**
- * Practice mode (pure): free typing with no rhythm and no hearts, like a typing race.
+ * Practice mode (pure): free typing with no rhythm and no hearts, like a typing race (~80 words).
  *
  *  - Mistakes must be fixed with Backspace before you can move on (Ctrl+Backspace deletes a word).
  *  - A word typed with no mistakes adds to the combo; the first mistake in a word resets it.
@@ -66,8 +66,8 @@ function mulberry32(a: number) {
   };
 }
 
-/** A shuffled little story of about `words` words, wrapped into short lines. */
-export function generatePractice(seed: number, words = 100): string[] {
+/** A shuffled little story of about `words` words, split into short lines (the engine works line by line). */
+export function generatePractice(seed: number, words = 80): string[] {
   const rnd = mulberry32(seed);
   const pool = [...SENTENCES];
   for (let i = pool.length - 1; i > 0; i--) {

@@ -29,8 +29,7 @@ export class PracticeScreen implements Screen {
 
   private root!: HTMLElement;
   private panel!: HTMLElement;
-  private curLine!: HTMLElement;
-  private nextLine!: HTMLElement;
+  private text!: HTMLElement;
   private wpmEl!: HTMLElement;
   private accEl!: HTMLElement;
   private progEl!: HTMLElement;
@@ -54,20 +53,19 @@ export class PracticeScreen implements Screen {
     scene.heartsFrac = 1;
     scene.reducedMotion = store.data.settings.reducedMotion;
     if (store.data.settings.keyboardGuide === 'on') this.keyboard = new KeyboardGuide();
-    scene.floorFrac = this.keyboard ? 0.5 : 0.6;
+    scene.floorFrac = 0.8; // the text sits at the top here, so the room keeps its normal floor
 
     this.wpmEl = h('b', { text: '0' });
     this.accEl = h('b', { text: '100%' });
     this.progEl = h('span', { class: 'dim', text: '' });
     this.comboEl = h('div', { class: 'combo-num', text: '0' });
-    this.curLine = h('div', { class: 'line current' });
-    this.nextLine = h('div', { class: 'line next' });
+    this.text = h('div', { class: 'practice-text' });
     const best = store.data.progress[PRACTICE_ID];
     const hint = h('div', {
       class: 'type-hint',
       text: `type at your own pace · fix mistakes with backspace${best ? ` · best ${best.bestScore} (${best.bestWpm ?? 0} wpm)` : ''}`,
     });
-    this.panel = h('div', { class: 'typing panel' }, this.curLine, this.nextLine, hint, this.keyboard?.el);
+    this.panel = h('div', { class: 'typing panel' }, this.text, hint, this.keyboard?.el);
 
     root.append(
       h(
@@ -117,7 +115,6 @@ export class PracticeScreen implements Screen {
     }
     if (e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
     e.preventDefault();
-    const lineBefore = e2.line;
     const ev = e2.key(e.key, e.timeStamp);
     if (ev.kind === 'ignored') return;
     const scene = this.nav.scene;
@@ -144,7 +141,7 @@ export class PracticeScreen implements Screen {
     }
     scene.combo = e2.combo;
     this.comboEl.textContent = String(e2.combo);
-    this.render(e2.line !== lineBefore);
+    this.render();
     if (e2.finished) this.finish();
   };
 
@@ -155,25 +152,33 @@ export class PracticeScreen implements Screen {
     this.progEl.textContent = `${e.wordsDone} / ${e.totalWords} words`;
   }
 
-  /** Draw the current line: typed text, wrong characters in red, the cursor, the rest pending. */
-  private render(slide = false): void {
+  /** Draw the whole text: typed words, wrong characters in red, the cursor, the rest pending. */
+  private render(): void {
     const e = this.engine;
-    const t = e.target;
-    const ok = e.correctLength;
-    const chars = [...t].map((ch, i) => {
-      const cls = i < ok ? 'done' : i < e.typed.length ? 'err' : i === e.typed.length ? 'cursor' : 'pending';
-      const attrs: Record<string, string> = {};
-      if (ch === ' ') attrs['data-sp'] = i === t.length - 1 ? 'end' : '';
-      if (ch === '.' || ch === ',') attrs['data-g'] = ch === '.' ? 'dot' : 'comma';
-      return h('span', { class: `ch ${cls}`, text: ch === ' ' ? ' ' : ch, attrs });
+    const parts: HTMLElement[] = [];
+    e.lines.forEach((line, li) => {
+      let word: HTMLElement | null = null;
+      const ok = li === e.line ? e.correctLength : 0;
+      [...line].forEach((ch, i) => {
+        let cls: string;
+        if (li < e.line) cls = 'done';
+        else if (li > e.line) cls = 'pending';
+        else cls = i < ok ? 'done' : i < e.typed.length ? 'err' : i === e.typed.length ? 'cursor' : 'pending';
+        if (ch === ' ') {
+          if (word) parts.push(word);
+          word = null;
+          // a real space, so the paragraph wraps between words
+          parts.push(h('span', { class: `ch sp ${cls}`, text: ' ' }));
+          return;
+        }
+        word ??= h('span', { class: 'word' });
+        word.append(h('span', { class: `ch ${cls}`, text: ch }));
+        if (cls === 'cursor' || cls === 'err') word.classList.add('now');
+      });
+      if (word) parts.push(word);
     });
-    this.curLine.replaceChildren(...chars);
-    this.nextLine.textContent = e.lines[e.line + 1] ?? '';
-    if (slide) {
-      this.curLine.classList.remove('slide');
-      void this.curLine.offsetWidth;
-      this.curLine.classList.add('slide');
-    }
+    this.text.replaceChildren(...parts);
+    const t = e.target;
     this.keyboard?.show(e.hasErrors ? '\b' : (t[e.typed.length] ?? ''));
     this.updateStats();
   }

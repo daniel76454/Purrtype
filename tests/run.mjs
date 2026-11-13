@@ -244,10 +244,10 @@ test('mergeSaves: best progress per level, union of items, newest balance and se
 });
 
 // ---- practice mode ------------------------------------------------------------------------
-test('practice: generated text is about 100 words in short lines', () => {
+test('practice: generated text is about 80 words in short lines', () => {
   const lines = generatePractice(42);
   const words = lines.join(' ').split(' ').length;
-  assert.ok(words >= 100 && words <= 115, `${words} words`);
+  assert.ok(words >= 80 && words <= 95, `${words} words`);
   assert.ok(lines.every((l) => l.length <= 42 && l === l.trim()));
   assert.deepEqual(generatePractice(42), lines, 'same seed, same text');
 });

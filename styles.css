@@ -19,7 +19,7 @@
   --good: #7fd1b9;
   --bad: #ef7f9a;
   --font: 'Pixelify Sans', 'Silkscreen', ui-monospace, monospace;
-  --mono: 'VT323', ui-monospace, Menlo, Consolas, monospace;
+  --mono: 'Atkinson Hyperlegible Mono', ui-monospace, Menlo, Consolas, monospace;
   --b: 4px; /* pixel border size */
   --border: 0 calc(var(--b) * -1) 0 0 var(--line), 0 var(--b) 0 0 var(--line), calc(var(--b) * -1) 0 0 0 var(--line), var(--b) 0 0 0 var(--line);
 }
@@ -154,9 +154,9 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
 .center { position: absolute; left: 50%; bottom: max(16px, 3vh); transform: translateX(-50%); width: min(860px, 92vw); display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
 .typing { position: relative; padding: 10px 26px 16px; background: rgba(18, 14, 36, 0.95); }
 .line { font-family: var(--mono); white-space: pre; }
-.line.current { font-size: 46px; line-height: 1.3; min-height: 1.3em; }
+.line.current { font-size: 27px; font-weight: 500; line-height: 1.5; min-height: 1.5em; }
 .line.current.slide { animation: slide 0.2s steps(4); }
-.line.next { font-size: 36px; line-height: 1.3; color: #9d91c4; margin-top: 4px; min-height: 1.3em; overflow: hidden; }
+.line.next { font-size: 21px; line-height: 1.5; color: #9d91c4; margin-top: 2px; min-height: 1.5em; overflow: hidden; }
 .ch { display: inline-block; position: relative; }
 .ch.pending { color: #d4c8ea; }
 .ch.perfect { color: var(--perfect); }
@@ -173,13 +173,8 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
 .slider { display: block; image-rendering: pixelated; margin-bottom: 2px; will-change: transform; }
 .slider.hidden { visibility: hidden; }
 .type-hint { margin-top: 10px; font-size: 13px; color: var(--ink-dim); text-align: center; letter-spacing: 0.04em; }
-/* clearer punctuation: VT323's comma and period are nearly identical, so draw our own on the font's grid */
-.ch[data-g] { -webkit-text-fill-color: transparent; }
-.ch[data-g]::before { content: ''; position: absolute; inset: 0; background: currentColor; -webkit-mask: var(--glyph) 0 0 / 100% 100% no-repeat; mask: var(--glyph) 0 0 / 100% 100% no-repeat; }
-.ch[data-g='dot'] { --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 26' preserveAspectRatio='none' shape-rendering='crispEdges'%3E%3Crect x='2' y='15' width='1' height='1'/%3E%3Crect x='2' y='16' width='1' height='1'/%3E%3Crect x='2' y='17' width='1' height='1'/%3E%3Crect x='2' y='18' width='1' height='1'/%3E%3Crect x='3' y='15' width='1' height='1'/%3E%3Crect x='3' y='16' width='1' height='1'/%3E%3Crect x='3' y='17' width='1' height='1'/%3E%3Crect x='3' y='18' width='1' height='1'/%3E%3Crect x='4' y='15' width='1' height='1'/%3E%3Crect x='4' y='16' width='1' height='1'/%3E%3Crect x='4' y='17' width='1' height='1'/%3E%3Crect x='4' y='18' width='1' height='1'/%3E%3Crect x='5' y='15' width='1' height='1'/%3E%3Crect x='5' y='16' width='1' height='1'/%3E%3Crect x='5' y='17' width='1' height='1'/%3E%3Crect x='5' y='18' width='1' height='1'/%3E%3C/svg%3E"); }
-.ch[data-g='comma'] { --glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 8 26' preserveAspectRatio='none' shape-rendering='crispEdges'%3E%3Crect x='2' y='15' width='1' height='1'/%3E%3Crect x='2' y='16' width='1' height='1'/%3E%3Crect x='2' y='17' width='1' height='1'/%3E%3Crect x='2' y='18' width='1' height='1'/%3E%3Crect x='3' y='15' width='1' height='1'/%3E%3Crect x='3' y='16' width='1' height='1'/%3E%3Crect x='3' y='17' width='1' height='1'/%3E%3Crect x='3' y='18' width='1' height='1'/%3E%3Crect x='4' y='15' width='1' height='1'/%3E%3Crect x='4' y='16' width='1' height='1'/%3E%3Crect x='4' y='17' width='1' height='1'/%3E%3Crect x='4' y='18' width='1' height='1'/%3E%3Crect x='5' y='15' width='1' height='1'/%3E%3Crect x='5' y='16' width='1' height='1'/%3E%3Crect x='5' y='17' width='1' height='1'/%3E%3Crect x='5' y='18' width='1' height='1'/%3E%3Crect x='4' y='19' width='1' height='1'/%3E%3Crect x='5' y='19' width='1' height='1'/%3E%3Crect x='4' y='20' width='1' height='1'/%3E%3Crect x='5' y='20' width='1' height='1'/%3E%3Crect x='3' y='21' width='1' height='1'/%3E%3Crect x='4' y='21' width='1' height='1'/%3E%3Crect x='2' y='22' width='1' height='1'/%3E%3Crect x='3' y='22' width='1' height='1'/%3E%3C/svg%3E"); }
 /* the space that closes a line (and any space under the cursor) gets a small pixel underscore */
-.ch[data-sp]::after { content: ''; position: absolute; left: 25%; right: 25%; bottom: 0.18em; height: 3px; background: currentColor; opacity: 0; }
+.ch[data-sp]::after { content: ''; position: absolute; left: 25%; right: 25%; bottom: 0.25em; height: 3px; background: currentColor; opacity: 0; }
 .ch.pending[data-sp='end']::after { opacity: 0.5; }
 .ch.cursor[data-sp]::after { opacity: 0.9; }
 
@@ -215,8 +210,8 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
 @media (max-width: 700px) {
   .screen { padding: 18px; }
   .title h1 { font-size: 56px; }
-  .line.current { font-size: 28px; }
-  .line.next { font-size: 24px; }
+  .line.current { font-size: 18px; }
+  .line.next { font-size: 15px; }
 }
 
 /* pixel icons (generated: 1 SVG rect per pixel) */
@@ -234,7 +229,7 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
 .kb-row { display: flex; gap: 4px; justify-content: center; }
 .kb-row.r0 { margin-left: -14px; }
 .kb-row.r1 { margin-left: 6px; }
-.kb-key { position: relative; min-width: 27px; height: 25px; padding: 0 4px; display: grid; place-items: center; font-size: 19px; line-height: 1; color: var(--ink-dim); background: var(--card); box-shadow: 0 0 0 2px var(--outline), inset 0 -3px 0 var(--finger, rgba(0, 0, 0, 0.3)); }
+.kb-key { position: relative; min-width: 27px; height: 25px; padding: 0 4px; display: grid; place-items: center; font-size: 14px; line-height: 1; color: var(--ink-dim); background: var(--card); box-shadow: 0 0 0 2px var(--outline), inset 0 -3px 0 var(--finger, rgba(0, 0, 0, 0.3)); }
 .kb-key.wide { min-width: 46px; font-size: 14px; }
 .kb-key.space { min-width: 220px; font-size: 14px; }
 .kb-key.bump::after { content: ''; position: absolute; left: 35%; right: 35%; bottom: 5px; height: 2px; background: currentColor; }
@@ -260,3 +255,13 @@ select:focus-visible, input[type='text']:focus-visible { outline: 3px dashed var
 .ch.err { background: var(--bad); color: var(--outline); }
 .big-score { font-size: 20px; }
 .big-score b { font-size: 48px; color: var(--perfect); text-shadow: 3px 3px 0 var(--outline); }
+
+/* practice: the whole text in a big panel at the top, the room and cat below */
+.practice .center { top: 74px; bottom: auto; width: min(920px, 94vw); }
+.practice .combo { top: auto; bottom: 28px; }
+.practice-text { font-family: var(--mono); font-size: 23px; line-height: 1.7; white-space: normal; }
+.practice-text .word { display: inline-block; white-space: nowrap; }
+.practice-text .ch.sp { display: inline; }
+.practice-text .ch.pending { color: #b4a9d6; }
+.practice-text .word.now { box-shadow: inset 0 -2px 0 var(--ink-dim); }
+@media (max-width: 700px) { .practice-text { font-size: 17px; } }

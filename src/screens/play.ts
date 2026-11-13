@@ -16,13 +16,10 @@ import { LevelSelectScreen } from './levels.js';
 type State = 'loading' | 'countin' | 'playing' | 'paused' | 'done';
 type CharClass = 'pending' | Grade | 'skipped';
 
-const GLYPHS: Record<string, string> = { '.': 'dot', ',': 'comma' };
-
-/** One character of the story. The line's closing space gets a marker; '.' and ',' get clearer pixel glyphs. */
+/** One character of the story. The line's closing space gets a marker. */
 function charSpan(ch: string, last = false): HTMLElement {
   const attrs: Record<string, string> = {};
   if (ch === ' ') attrs['data-sp'] = last ? 'end' : '';
-  if (GLYPHS[ch]) attrs['data-g'] = GLYPHS[ch]!;
   return h('span', { class: 'ch', text: ch === ' ' ? ' ' : ch, attrs });
 }
 
