@@ -157,7 +157,7 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
 .line { font-family: var(--mono); white-space: pre; }
 .line.current { font-size: 27px; font-weight: 500; line-height: 1.5; min-height: 1.5em; }
 .line.current.slide { animation: slide 0.2s steps(4); }
-.line.next { font-size: 21px; line-height: 1.5; color: #9d91c4; margin-top: 2px; min-height: 1.5em; overflow: hidden; }
+.line.next { font-size: 27px; font-weight: 500; line-height: 1.5; color: #b4a9d6; margin-top: 2px; min-height: 1.5em; overflow: hidden; }
 .ch { display: inline-block; position: relative; }
 .ch.pending { color: #d4c8ea; }
 .ch.perfect { color: var(--perfect); }
@@ -212,7 +212,7 @@ input:focus-visible { outline: 3px dashed var(--accent); outline-offset: 4px; }
   .screen { padding: 18px; }
   .title h1 { font-size: 56px; }
   .line.current { font-size: 18px; }
-  .line.next { font-size: 15px; }
+  .line.next { font-size: 18px; }
 }
 
 /* pixel icons (generated: 1 SVG rect per pixel) */
