@@ -26,7 +26,7 @@ export function mergeSaves(local: SaveData, remote: SaveData): SaveData {
   }
 
   const owned = Array.from(new Set([...local.owned, ...remote.owned]));
-  const equipped = { ...newer.equipped, decor: newer.equipped.decor.filter((id) => owned.includes(id)) };
+  const equipped = { ...newer.equipped, decor: newer.equipped.decor.filter((id) => owned.includes(id)), tints: { ...local.equipped.tints, ...newer.equipped.tints } };
   for (const cat of ['fur', 'hat', 'collar', 'toy', 'room'] as const) {
     if (!owned.includes(equipped[cat])) equipped[cat] = local.equipped[cat];
   }
@@ -36,6 +36,7 @@ export function mergeSaves(local: SaveData, remote: SaveData): SaveData {
     updatedAt: Math.max(local.updatedAt ?? 0, remote.updatedAt ?? 0),
     settings: { ...newer.settings, audioOffsetMs: local.settings.audioOffsetMs },
     yarn: newer.yarn,
+    pets: Math.max(local.pets ?? 0, remote.pets ?? 0),
     progress,
     owned,
     equipped,

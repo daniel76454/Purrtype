@@ -4,6 +4,7 @@ import { store } from '../core/storage.js';
 import { SECTIONS } from '../data/sections.js';
 import { MusicDirector } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
+import { catVoice } from '../audio/catVoice.js';
 import { practiceText, PracticeEngine, type PracticeResult, type PracticeText } from '../game/practice.js';
 import { KeyboardGuide } from './keyboard.js';
 import { button, icon, leaderboardBox } from './ui.js';
@@ -12,7 +13,7 @@ import { MenuScreen } from './menu.js';
 export const PRACTICE_ID = 'practice';
 /** Clean words in a row before the cat gets its toy back after a mistake. */
 const RECOVER_WORDS = 3;
-const YARN_PER_SCORE = 1 / 25;
+const YARN_PER_SCORE = 1 / 6; // e.g. 50 wpm at 95% ≈ 430 points ≈ 70 yarn
 
 /**
  * Free typing, no rhythm: type a ~100-word story at your own pace. No hearts; clean words build
@@ -68,7 +69,7 @@ export class PracticeScreen implements Screen {
       text: `type at your own pace · fix mistakes with backspace${best ? ` · best ${best.bestScore} (${best.bestWpm ?? 0} wpm)` : ''}`,
     });
     const sources = this.sourcesEl();
-    this.panel = h('div', { class: 'typing panel' }, this.text, sources, hint, this.keyboard?.el);
+    this.panel = h('div', { class: 'typing panel' }, this.text, sources, hint);
 
     root.append(
       h(
@@ -78,11 +79,12 @@ export class PracticeScreen implements Screen {
           'div',
           { class: 'hud' },
           h('div', { class: 'practice-stats' }, h('span', {}, this.wpmEl, ' wpm'), h('span', {}, this.accEl, ' accuracy'), this.progEl),
-          h('div', { class: 'level-name', text: this.content.kind === 'quotes' ? 'Practice · famous quotes' : 'Practice · cozy story' }),
+          h('div', { class: 'level-name', text: this.content.kind === 'quotes' ? 'Practice · famous passage' : 'Practice · cozy story' }),
           button('Menu', () => this.nav.go(new MenuScreen(this.nav)), 'ghost small'),
         ),
         h('div', { class: 'combo' }, this.comboEl, h('div', { class: 'combo-label', text: 'combo' })),
         h('div', { class: 'center' }, this.panel),
+        this.keyboard ? h('div', { class: 'kb-dock panel' }, this.keyboard.el) : null,
       ),
     );
     this.render();
@@ -126,6 +128,7 @@ export class PracticeScreen implements Screen {
       sfx.miss();
       if (ev.firstErrorInWord) {
         scene.miss();
+        catVoice.miss();
         scene.recovering = true;
         this.recovering = true;
         this.cleanSinceMiss = 0;
@@ -136,6 +139,7 @@ export class PracticeScreen implements Screen {
     } else if (ev.kind === 'word') {
       sfx.hit(ev.clean ? 'perfect' : 'good', e2.combo);
       scene.hit(ev.clean ? 'perfect' : 'good');
+      if (ev.clean) catVoice.combo(e2.combo);
       if (ev.clean && this.recovering && ++this.cleanSinceMiss >= RECOVER_WORDS) {
         this.recovering = false;
         scene.recovering = false;
@@ -190,7 +194,7 @@ export class PracticeScreen implements Screen {
   private sourcesEl(): HTMLElement | null {
     const list = [...new Set(this.content.sources)];
     if (!list.length) return null;
-    return h('div', { class: 'quote-sources' }, h('span', { class: 'dim', text: 'quotes from ' }), list.join(' · '));
+    return h('div', { class: 'quote-sources' }, h('span', { class: 'dim', text: 'from ' }), list.join(' · '));
   }
 
   private finish(): void {

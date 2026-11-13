@@ -1,5 +1,6 @@
 import { Emitter } from './events.js';
 import type { Outfit, SaveData } from './types.js';
+import { RETIRED_DECOR } from '../data/shop.js';
 
 const KEY = 'purrtype.save';
 
@@ -20,6 +21,7 @@ export function defaultSave(): SaveData {
       playerName: '',
     },
     yarn: 0,
+    pets: 0,
     progress: {},
     owned: ['hat.none', 'collar.none', 'toy.yarn', 'fur.orange', 'room.night'],
     equipped: {
@@ -29,6 +31,7 @@ export function defaultSave(): SaveData {
       fur: 'fur.orange',
       room: 'room.night',
       decor: [],
+      tints: {},
     },
   };
 }
@@ -42,13 +45,18 @@ export function normalizeSave(raw: unknown): SaveData {
   const d = defaultSave();
   const oldDecor = p.equipped?.decor;
   const decor = Array.isArray(oldDecor) ? oldDecor : oldDecor && oldDecor !== 'decor.none' ? [oldDecor] : [];
+  // retired decor is refunded
+  let owned = Array.from(new Set([...d.owned, ...(p.owned ?? [])])).filter((id) => id !== 'decor.none');
+  const refund = owned.reduce((n, id) => n + (RETIRED_DECOR[id] ?? 0), 0);
+  owned = owned.filter((id) => !(id in RETIRED_DECOR));
   return {
     ...d,
     ...p,
+    yarn: (p.yarn ?? 0) + refund,
     settings: { ...d.settings, ...p.settings },
-    equipped: { ...d.equipped, ...p.equipped, decor },
+    equipped: { ...d.equipped, ...p.equipped, decor: decor.filter((id) => !(id in RETIRED_DECOR)), tints: { ...p.equipped?.tints } },
     progress: p.progress ?? {},
-    owned: Array.from(new Set([...d.owned, ...(p.owned ?? [])])).filter((id) => id !== 'decor.none'),
+    owned,
   };
 }
 

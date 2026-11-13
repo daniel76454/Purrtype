@@ -7,7 +7,11 @@ export const CATEGORIES: Category[] = ['fur', 'hat', 'collar', 'toy', 'room', 'd
 /** Categories where exactly one item is worn or used at a time. */
 export type SingleCategory = Exclude<Category, 'decor'>;
 /** What the cat wears and the room looks like. Decor is additive: any number of items at once. */
-export type Outfit = Record<SingleCategory, string> & { decor: string[] };
+export type Outfit = Record<SingleCategory, string> & {
+  decor: string[];
+  /** Chosen colour/design per item id (see ShopItem.variants). */
+  tints: Record<string, string>;
+};
 
 export interface Settings {
   master: number; // 0..1
@@ -43,4 +47,6 @@ export interface SaveData {
   progress: Record<string, LevelProgress>;
   owned: string[];
   equipped: Outfit;
+  /** Times the cat was petted on the main menu (an easter egg). */
+  pets: number;
 }

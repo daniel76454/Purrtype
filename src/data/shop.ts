@@ -2,7 +2,7 @@ import type { Category } from '../core/types.js';
 import type { Theme } from './sections.js';
 
 /** Coat patterns drawn on top of the base fur colour (see drawCatSprite in src/render/cat.ts). */
-export type FurPattern = 'solid' | 'tuxedo' | 'siamese' | 'calico' | 'tabby';
+export type FurPattern = 'solid' | 'tuxedo' | 'siamese' | 'calico' | 'tabby' | 'pitsi';
 /** Wall finishes for room styles. */
 export type WallStyle = 'plain' | 'wood' | 'brick' | 'stars' | 'stripes' | 'leaves';
 
@@ -16,7 +16,20 @@ export interface ShopItem {
   pattern?: FurPattern;
   /** Rooms: colours and wall finish. Without one (the default room), each section keeps its own colours. */
   room?: { theme: Theme; wall: WallStyle };
+  /** Decor: free colour or design choices once owned. The first is the default. */
+  variants?: Variant[];
+  /** Hidden from the shop until unlocked some other way. */
+  secret?: boolean;
 }
+
+export interface Variant {
+  id: string;
+  name: string;
+  color: string;
+}
+
+/** Decor that was retired: owners get their yarn back (see normalizeSave). */
+export const RETIRED_DECOR: Record<string, number> = { 'decor.plant': 250, 'decor.books': 150, 'decor.clock': 200, 'decor.record': 300 };
 
 export const CATEGORY_LABELS: Record<Category, string> = {
   fur: 'Cats',
@@ -43,6 +56,8 @@ export const SHOP_ITEMS: ShopItem[] = [
   { id: 'fur.tuxedo', category: 'fur', name: 'Tuxedo', price: 400, color: '#34303d', pattern: 'tuxedo' },
   { id: 'fur.siamese', category: 'fur', name: 'Siamese', price: 450, color: '#efe0c4', pattern: 'siamese' },
   { id: 'fur.calico', category: 'fur', name: 'Calico', price: 500, color: '#f4efe6', pattern: 'calico' },
+  // a secret: pet the cat on the main menu enough times
+  { id: 'fur.pitsi', category: 'fur', name: 'Pitsi', price: 0, color: '#8d7f6e', pattern: 'pitsi', secret: true },
 
   // hats
   { id: 'hat.none', category: 'hat', name: 'No hat', price: 0 },
@@ -103,15 +118,108 @@ export const SHOP_ITEMS: ShopItem[] = [
     room: room({ wall: '#2f5a48', wallDark: '#11281f', floor: '#4a3f33', floorDark: '#1f1a14', glow: '#ffe39a', accent: '#7fd1b9', skyBottom: '#1d4a5c' }, 'leaves'),
   },
 
-  // decor: place as many as you like
-  { id: 'decor.rug', category: 'decor', name: 'Round rug', price: 150 },
-  { id: 'decor.books', category: 'decor', name: 'Book pile', price: 150 },
-  { id: 'decor.clock', category: 'decor', name: 'Wall clock', price: 200 },
-  { id: 'decor.bed', category: 'decor', name: 'Cat bed', price: 250 },
-  { id: 'decor.plant', category: 'decor', name: 'House plant', price: 250 },
-  { id: 'decor.record', category: 'decor', name: 'Record player', price: 300 },
-  { id: 'decor.lamp', category: 'decor', name: 'Floor lamp', price: 350 },
+  // decor: place as many as you like, and pick a colour or design for each
+  {
+    id: 'decor.rug',
+    category: 'decor',
+    name: 'Round rug',
+    price: 150,
+    variants: [
+      { id: 'gray', name: 'Grey', color: '#8a8496' },
+      { id: 'sand', name: 'Sand', color: '#c9a87a' },
+      { id: 'rose', name: 'Rose', color: '#c97b8e' },
+      { id: 'sage', name: 'Sage', color: '#7fa38a' },
+      { id: 'navy', name: 'Navy', color: '#4a5a8a' },
+    ],
+  },
+  { id: 'decor.candles', category: 'decor', name: 'Candles', price: 150 },
+  {
+    id: 'decor.poster',
+    category: 'decor',
+    name: 'Wall poster',
+    price: 120,
+    variants: [
+      { id: 'cat', name: 'Moon cat', color: '#f2a65a' },
+      { id: 'waves', name: 'Waves', color: '#7fb7e0' },
+      { id: 'peaks', name: 'Mountains', color: '#9b7bd0' },
+      { id: 'sunset', name: 'Sunset', color: '#ff9e7a' },
+      { id: 'vinyl', name: 'Vinyl', color: '#e8667a' },
+    ],
+  },
+  {
+    id: 'decor.bed',
+    category: 'decor',
+    name: 'Cat bed',
+    price: 250,
+    variants: [
+      { id: 'rose', name: 'Rose', color: '#b5576a' },
+      { id: 'gray', name: 'Grey', color: '#7a7686' },
+      { id: 'blue', name: 'Blue', color: '#5b7fd1' },
+    ],
+  },
+  {
+    id: 'decor.beanbag',
+    category: 'decor',
+    name: 'Bean bag',
+    price: 300,
+    variants: [
+      { id: 'plum', name: 'Plum', color: '#7a4a8c' },
+      { id: 'mustard', name: 'Mustard', color: '#d9a83e' },
+      { id: 'teal', name: 'Teal', color: '#3f8a80' },
+      { id: 'gray', name: 'Grey', color: '#7a7686' },
+    ],
+  },
+  {
+    id: 'decor.lava',
+    category: 'decor',
+    name: 'Lava lamp',
+    price: 300,
+    variants: [
+      { id: 'purple', name: 'Purple', color: '#b46cff' },
+      { id: 'orange', name: 'Orange', color: '#ff8a3d' },
+      { id: 'green', name: 'Green', color: '#6fe08a' },
+    ],
+  },
+  {
+    id: 'decor.lamp',
+    category: 'decor',
+    name: 'Floor lamp',
+    price: 350,
+    variants: [
+      { id: 'cream', name: 'Cream', color: '#f6dfae' },
+      { id: 'pink', name: 'Pink', color: '#f6b8c8' },
+      { id: 'mint', name: 'Mint', color: '#bfe8d6' },
+    ],
+  },
+  {
+    id: 'decor.neon',
+    category: 'decor',
+    name: 'Neon moon',
+    price: 400,
+    variants: [
+      { id: 'pink', name: 'Pink', color: '#ff6fb0' },
+      { id: 'cyan', name: 'Cyan', color: '#5ff0ff' },
+      { id: 'amber', name: 'Amber', color: '#ffb347' },
+    ],
+  },
+  {
+    id: 'decor.guitar',
+    category: 'decor',
+    name: 'Guitar',
+    price: 450,
+    variants: [
+      { id: 'honey', name: 'Honey', color: '#d99a4e' },
+      { id: 'cherry', name: 'Cherry', color: '#b5404a' },
+      { id: 'black', name: 'Black', color: '#3a3544' },
+    ],
+  },
 ];
 
 export const itemById = (id: string): ShopItem | undefined => SHOP_ITEMS.find((i) => i.id === id);
 export const itemsIn = (c: Category): ShopItem[] => SHOP_ITEMS.filter((i) => i.category === c);
+
+/** The colour/design chosen for an item (or its first variant). */
+export function variantOf(id: string, tints: Record<string, string> | undefined): Variant | undefined {
+  const v = itemById(id)?.variants;
+  return v?.find((x) => x.id === tints?.[id]) ?? v?.[0];
+}

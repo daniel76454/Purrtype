@@ -1,6 +1,6 @@
 import type { Grade, Outfit } from '../core/types.js';
 import type { Theme } from '../data/sections.js';
-import { itemById, type FurPattern, type WallStyle } from '../data/shop.js';
+import { itemById, variantOf, type FurPattern, type WallStyle } from '../data/shop.js';
 
 /*
  * Pixel-art renderer for the background room, the cat and its toy.
@@ -41,6 +41,7 @@ const DEFAULT_OUTFIT: Outfit = {
   fur: 'fur.orange',
   room: 'room.night',
   decor: [],
+  tints: {},
 };
 
 export const DEFAULT_THEME: Theme = {
@@ -253,7 +254,7 @@ function drawCatSprite(c: Ctx, p: CatPose): void {
   const soft = shade(fur, -0.16);
   const light = shade(fur, 0.35);
   const darkFur = lum(fur) < 0.3;
-  const ink = p.pattern === 'siamese' ? '#6fb6ff' : darkFur ? EYE : OUTLINE;
+  const ink = p.pattern === 'siamese' ? '#6fb6ff' : p.pattern === 'pitsi' ? '#4b5a43' : darkFur ? EYE : OUTLINE;
   const mouthCol = darkFur ? shade(fur, 0.45) : shade(fur, -0.5);
   const P = (x: number, y: number, col: string, w = 1, h = 1) => px(c, OX + x, OY + y, col, w, h);
   const { rx, ry, cy, top, face } = catGeo(p);
@@ -323,6 +324,23 @@ function drawCatSprite(c: Ctx, p: CatPose): void {
     ellipse(c, OX + 9, OY + cy + 6, 3, 2, '#e8955a');
     ellipse(c, OX - 10, OY + cy + 7, 2, 2, '#3a3540');
     P(-22, -12, '#e8955a', 4, 12); // tail tip
+  } else if (p.pattern === 'pitsi') {
+    // brown-grey mackerel tabby with a cream muzzle and chest
+    const S = '#3b332d';
+    ellipse(c, OX, OY + face + 2, 5, 2, '#e9dccb');
+    ellipse(c, OX, OY + cy + 6, 6, 4, '#d8c9b4');
+    for (const y of [face + 3, face + 5, face + 7, face + 9]) {
+      const w = hw(y);
+      P(-w, y, S, 4, 1);
+      P(w - 3, y, S, 4, 1);
+    }
+    P(-3, top + 1, S, 1, 3);
+    P(-1, top, S, 1, 4);
+    P(1, top, S, 1, 4);
+    P(3, top + 1, S, 1, 3);
+    P(-5, face - 4, S, 2, 1);
+    P(4, face - 4, S, 2, 1);
+    for (const x of [-20, -17, -14]) P(x, -12, S, 1, 12); // tail rings
   } else if (p.pattern === 'tabby') {
     const S = shade(fur, -0.4);
     for (const y of [face + 4, face + 6, face + 8]) {
@@ -382,6 +400,17 @@ function drawCatSprite(c: Ctx, p: CatPose): void {
     const y = cy + ry - 4 - Math.round(5 * s);
     P(x, y, fur, 4, 3);
     P(x + 1, y + 2, light, 2, 1);
+  }
+
+  // Pitsi always wears her little clementine (a hat goes on top of it)
+  if (p.pattern === 'pitsi') {
+    const x = 5;
+    const y = top - 3;
+    ellipse(c, OX + x, OY + y, 2, 2, OUTLINE);
+    ellipse(c, OX + x, OY + y, 2, 2, '#f28c3a');
+    P(x - 1, y - 1, '#ffb36b');
+    P(x, y - 3, '#3f7a4c');
+    P(x + 1, y - 4, '#6fbf73', 2, 1);
   }
 
   drawCollar(c, p);
@@ -458,76 +487,126 @@ const OUTLINE_OFFSETS = [
 ] as const;
 
 // ---- room props (shared by the scene and the shop icons) --------------------------
-function drawRug(c: Ctx, cx: number, cy: number, rx: number, accent: string): void {
+function drawRug(c: Ctx, cx: number, cy: number, rx: number, color: string): void {
   ellipse(c, cx, cy, rx + 1, 5, OUTLINE);
-  ellipse(c, cx, cy, rx, 4, shade(accent, -0.35));
-  ellipse(c, cx, cy, rx - 4, 3, shade(accent, -0.1));
-  ellipse(c, cx, cy, rx - 9, 2, shade(accent, -0.35));
-  ellipse(c, cx, cy, rx - 14, 1, shade(accent, 0.25));
+  ellipse(c, cx, cy, rx, 4, shade(color, -0.25));
+  ellipse(c, cx, cy, rx - 4, 3, color);
+  ellipse(c, cx, cy, rx - 9, 2, shade(color, -0.25));
+  ellipse(c, cx, cy, rx - 14, 1, shade(color, 0.3));
   for (let i = -1; i <= 1; i++) {
-    px(c, cx - rx - 3, cy + i * 2, shade(accent, 0.3), 2, 1);
-    px(c, cx + rx + 2, cy + i * 2, shade(accent, 0.3), 2, 1);
+    px(c, cx - rx - 3, cy + i * 2, shade(color, 0.35), 2, 1);
+    px(c, cx + rx + 2, cy + i * 2, shade(color, 0.35), 2, 1);
   }
 }
 
-/** A potted monstera standing on `baseY`, centred on `x`. */
-function drawPlant(c: Ctx, x: number, baseY: number): void {
-  const pot = '#b8664a';
-  px(c, x - 6, baseY - 10, OUTLINE, 13, 11);
-  px(c, x - 5, baseY - 9, pot, 11, 9);
-  px(c, x - 6, baseY - 11, OUTLINE, 13, 3);
-  px(c, x - 5, baseY - 10, shade('#b8664a', 0.2), 11, 1);
-  const leaf = (lx: number, ly: number, rx: number, ry: number, col: string) => {
-    ellipse(c, lx, ly, rx + 1, ry + 1, OUTLINE);
-    ellipse(c, lx, ly, rx, ry, col);
-    px(c, lx, ly - ry + 1, shade(col, -0.3), 1, ry * 2 - 1);
-  };
-  px(c, x, baseY - 22, '#3f7a4c', 1, 11);
-  px(c, x - 3, baseY - 17, '#3f7a4c', 1, 6);
-  px(c, x + 3, baseY - 18, '#3f7a4c', 1, 7);
-  leaf(x - 6, baseY - 19, 4, 3, '#4f9a5c');
-  leaf(x + 6, baseY - 21, 4, 3, '#5aa866');
-  leaf(x - 1, baseY - 26, 4, 4, '#62b36e');
-  leaf(x + 3, baseY - 14, 3, 2, '#4f9a5c');
-}
-
 /** A round cat bed on the floor. */
-function drawBed(c: Ctx, x: number, baseY: number): void {
+function drawBed(c: Ctx, x: number, baseY: number, color = '#b5576a'): void {
   ellipse(c, x, baseY - 3, 12, 4, OUTLINE);
-  ellipse(c, x, baseY - 3, 11, 3, '#b5576a');
-  ellipse(c, x, baseY - 4, 8, 1, '#e8c4b0');
-  px(c, x - 11, baseY - 4, '#d9788a', 2, 1);
-  px(c, x + 10, baseY - 4, '#d9788a', 2, 1);
+  ellipse(c, x, baseY - 3, 11, 3, color);
+  ellipse(c, x, baseY - 4, 8, 1, '#e8d8c8');
+  px(c, x - 11, baseY - 4, shade(color, 0.25), 2, 1);
+  px(c, x + 10, baseY - 4, shade(color, 0.25), 2, 1);
 }
 
-/** A little pile of books on the floor. */
-function drawBooks(c: Ctx, x: number, baseY: number): void {
-  const cols = ['#5b7fd1', '#e0b25a', '#b5576a', '#6aa8a0'];
-  cols.forEach((col, i) => {
-    const w = 14 - (i % 2) * 2;
-    const bx = x - 7 + (i % 2);
-    const by = baseY - 3 - i * 3;
-    px(c, bx - 1, by - 1, OUTLINE, w + 2, 4);
-    px(c, bx, by, col, w, 2);
-    px(c, bx + w - 3, by, '#f3e6d0', 2, 2);
-  });
+/** A slouchy bean bag on the floor. */
+function drawBeanbag(c: Ctx, x: number, baseY: number, color: string): void {
+  ellipse(c, x, baseY - 6, 11, 7, OUTLINE);
+  ellipse(c, x, baseY - 6, 10, 6, color);
+  ellipse(c, x - 2, baseY - 9, 5, 2, shade(color, 0.22));
+  px(c, x + 3, baseY - 4, shade(color, -0.25), 6, 1);
 }
 
-/** A record player (sits on the windowsill). The vinyl spins in drawLive. */
-function drawRecord(c: Ctx, x: number, y: number): void {
-  px(c, x - 1, y - 6, OUTLINE, 14, 7);
-  px(c, x, y - 3, '#7a5650', 12, 3);
-  px(c, x, y - 5, '#5a3d3a', 12, 2);
-  ellipse(c, x + 5, y - 5, 4, 1, '#1a1622');
-  px(c, x + 5, y - 5, '#d9455f');
-  px(c, x + 10, y - 6, '#c9c2d6', 1, 2);
+/** An acoustic guitar leaning against the wall. */
+function drawGuitar(c: Ctx, x: number, baseY: number, color: string): void {
+  const neck = '#3a2d2a';
+  px(c, x + 1, baseY - 34, OUTLINE, 4, 22);
+  px(c, x + 2, baseY - 33, neck, 2, 21);
+  px(c, x + 1, baseY - 37, OUTLINE, 4, 4);
+  px(c, x + 2, baseY - 36, '#5a3d3a', 2, 2);
+  ellipse(c, x + 2, baseY - 13, 7, 6, OUTLINE);
+  ellipse(c, x + 2, baseY - 6, 8, 6, OUTLINE);
+  ellipse(c, x + 2, baseY - 13, 6, 5, color);
+  ellipse(c, x + 2, baseY - 6, 7, 5, color);
+  ellipse(c, x + 2, baseY - 10, 2, 2, OUTLINE);
+  px(c, x - 1, baseY - 4, shade(color, -0.4), 7, 1);
+  px(c, x + 2, baseY - 30, '#e8e0f0', 1, 26);
 }
 
-/** A round wall clock face (its hands show the real time, drawn in drawLive). */
-function drawClock(c: Ctx, cx: number, cy: number): void {
-  ellipse(c, cx, cy, 6, 6, OUTLINE);
-  ellipse(c, cx, cy, 5, 5, '#f3e6d0');
-  for (const [dx, dy] of [[0, -4], [4, 0], [0, 4], [-4, 0]] as const) px(c, cx + dx, cy + dy, '#8a7a6a');
+/** Two candles on the windowsill (their flames flicker in drawLive). */
+function drawCandles(c: Ctx, x: number, y: number): void {
+  px(c, x - 1, y - 7, OUTLINE, 5, 8);
+  px(c, x, y - 6, '#f3e6d0', 3, 6);
+  px(c, x + 4, y - 5, OUTLINE, 5, 6);
+  px(c, x + 5, y - 4, '#e8c4b0', 3, 4);
+}
+
+/** A small framed poster; the design comes from its variant. */
+function drawPoster(c: Ctx, x: number, y: number, design: string, color: string): void {
+  const W = 14;
+  const H = 15;
+  px(c, x - 1, y - 1, OUTLINE, W + 2, H + 2);
+  px(c, x, y, '#e8d6b0', W, H);
+  const ix = x + 1;
+  const iy = y + 1;
+  const iw = W - 2;
+  const ih = H - 2;
+  px(c, ix, iy, '#1e2140', iw, ih);
+  if (design === 'cat') {
+    ellipse(c, ix + 8, iy + 4, 2, 2, color);
+    px(c, ix + 2, iy + 8, OUTLINE, 5, 4);
+    px(c, ix + 2, iy + 7, OUTLINE);
+    px(c, ix + 6, iy + 7, OUTLINE);
+    px(c, ix + 7, iy + 10, OUTLINE, 3, 1);
+  } else if (design === 'waves') {
+    for (let k = 0; k < 3; k++) for (let i = 0; i < iw; i++) px(c, ix + i, iy + 5 + k * 3 + (((i + k * 2) >> 1) % 2), k ? shade(color, -0.2 * k) : color);
+  } else if (design === 'peaks') {
+    ellipse(c, ix + 9, iy + 3, 1, 1, '#ffd36b');
+    for (let i = 0; i < iw; i++) {
+      const h1 = Math.max(0, 6 - Math.abs(i - 4));
+      const h2 = Math.max(0, 5 - Math.abs(i - 9));
+      px(c, ix + i, iy + ih - h1 - 1, color, 1, h1 + 1);
+      if (h2 > h1) px(c, ix + i, iy + ih - h2 - 1, shade(color, -0.25), 1, h2 - h1);
+    }
+  } else if (design === 'sunset') {
+    px(c, ix, iy, shade(color, -0.45), iw, 4);
+    ellipse(c, ix + 6, iy + 8, 4, 4, color);
+    px(c, ix, iy + 8, '#1e2140', iw, 1);
+    px(c, ix, iy + 10, '#1e2140', iw, 1);
+    px(c, ix, iy + 11, shade(color, -0.6), iw, 2);
+  } else {
+    ellipse(c, ix + 6, iy + 6, 5, 5, '#0e0c18');
+    ellipse(c, ix + 6, iy + 6, 2, 2, color);
+    px(c, ix + 6, iy + 6, '#0e0c18');
+  }
+}
+
+/** A neon crescent moon with a little star (it glows and hums in drawLive). */
+function drawNeon(c: Ctx, cx: number, cy: number, color: string, glow = true): void {
+  if (glow) {
+    c.globalCompositeOperation = 'lighter';
+    c.globalAlpha = 0.08;
+    ellipse(c, cx, cy, 14, 11, color);
+    c.globalAlpha = 1;
+    c.globalCompositeOperation = 'source-over';
+  }
+  for (let a = 0; a < 40; a++) {
+    const t = (a / 40) * Math.PI * 1.45 + Math.PI * 0.75;
+    px(c, Math.round(cx + Math.cos(t) * 7), Math.round(cy + Math.sin(t) * 7), color);
+  }
+  for (let a = 0; a < 26; a++) {
+    const t = (a / 26) * Math.PI * 1.2 + Math.PI * 0.85;
+    px(c, Math.round(cx + 2 + Math.cos(t) * 5), Math.round(cy - 1 + Math.sin(t) * 5), color);
+  }
+  px(c, cx + 7, cy - 6, color, 1, 3);
+  px(c, cx + 6, cy - 5, color, 3, 1);
+}
+
+/** A lava lamp; its blobs drift in drawLive. */
+function drawLava(c: Ctx, x: number, baseY: number, color: string): void {
+  px(c, x - 3, baseY - 14, OUTLINE, 7, 15);
+  px(c, x - 2, baseY - 11, shade(color, -0.55), 5, 8);
+  px(c, x - 2, baseY - 13, '#8a8496', 5, 2);
+  px(c, x - 2, baseY - 3, '#8a8496', 5, 3);
 }
 
 /** Wall finish for room styles, laid over the wall gradient. */
@@ -584,7 +663,7 @@ function drawWallPattern(c: Ctx, style: WallStyle, th: Theme, x0: number, y0: nu
 }
 
 /** A tall paper floor lamp with its light. */
-function drawFloorLamp(c: Ctx, x: number, baseY: number, h: number, glow: string, withGlow = true): void {
+function drawFloorLamp(c: Ctx, x: number, baseY: number, h: number, glow: string, withGlow = true, shadeCol = '#f6dfae'): void {
   const top = baseY - h;
   if (withGlow) {
     c.globalCompositeOperation = 'lighter';
@@ -603,10 +682,10 @@ function drawFloorLamp(c: Ctx, x: number, baseY: number, h: number, glow: string
   px(c, x - 1, top + 10, OUTLINE, 3, h - 10);
   px(c, x, top + 10, '#4a3a48', 1, h - 11);
   px(c, x - 6, top - 1, OUTLINE, 13, 12);
-  px(c, x - 5, top, '#f6dfae', 11, 10);
-  px(c, x - 5, top, '#fff3d0', 11, 2);
+  px(c, x - 5, top, shadeCol, 11, 10);
+  px(c, x - 5, top, shade(shadeCol, 0.4), 11, 2);
   px(c, x - 5, top + 9, shade(glow, 0.2), 11, 1);
-  for (const lx of [-3, 0, 3]) px(c, x + lx, top + 2, '#ecd09a', 1, 7);
+  for (const lx of [-3, 0, 3]) px(c, x + lx, top + 2, shade(shadeCol, -0.08), 1, 7);
 }
 
 // ---- the scene -----------------------------------------------------------------
@@ -617,8 +696,11 @@ interface Geo {
   screen: { x: number; y: number; w: number; h: number } | null;
   mug: { x: number; y: number } | null;
   desk: { x: number; w: number } | null;
-  clock: { x: number; y: number } | null;
-  record: { x: number; y: number } | null;
+  deskSpot: { x: number; y: number } | null;
+  shelf: { x: number; y: number; w: number } | null;
+  candles: { x: number; y: number } | null;
+  neon: { x: number; y: number; color: string } | null;
+  lava: { x: number; y: number; color: string } | null;
   antenna: { x: number; y: number } | null;
 }
 
@@ -654,7 +736,7 @@ export class CatScene {
   private catCtx: Ctx;
   private silBuf = document.createElement('canvas');
   private silCtx: Ctx;
-  private geo: Geo = { win: { x: 0, y: 0, w: 1, h: 1 }, stars: [], bulbs: [], screen: null, mug: null, antenna: null, desk: null, clock: null, record: null };
+  private geo: Geo = { win: { x: 0, y: 0, w: 1, h: 1 }, stars: [], bulbs: [], screen: null, mug: null, antenna: null, desk: null, deskSpot: null, shelf: null, candles: null, neon: null, lava: null };
 
   /** Device pixels per scene pixel. */
   private P = 4;
@@ -753,6 +835,26 @@ export class CatScene {
       t.vy = -45;
       this.burst(t.x, t.y, 'spark', 2);
     }
+  }
+
+  /**
+   * Petting on the main menu: returns true if (clientX, clientY) is on the cat, and makes the cat
+   * close its eyes happily and send up a few hearts.
+   */
+  petAt(clientX: number, clientY: number): boolean {
+    if (!this.isOverCat(clientX, clientY)) return false;
+    this.cat.joy = 1.4;
+    this.beatPulse = 1;
+    this.burst(this.cat.x, this.footY - 30, 'heart', this.reducedMotion ? 1 : 3);
+    return true;
+  }
+
+  isOverCat(clientX: number, clientY: number): boolean {
+    const r = this.canvas.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const x = ((clientX - r.left) * dpr) / this.P;
+    const y = ((clientY - r.top) * dpr) / this.P;
+    return Math.abs(x - this.cat.x) <= 17 && y >= this.footY - 31 && y <= this.footY + 1;
   }
 
   /** First wrong key of a word: the cat bats too hard and the toy rolls away. */
@@ -960,7 +1062,7 @@ export class CatScene {
   }
 
   private draw(): void {
-    const key = `${this.lw}x${this.lh}|${JSON.stringify(this.look)}|${this.outfit.decor.join()}|${this.layout}|${this.floorY}`;
+    const key = `${this.lw}x${this.lh}|${JSON.stringify(this.look)}|${this.outfit.decor.join()}|${JSON.stringify(this.outfit.tints)}|${this.layout}|${this.floorY}`;
     if (key !== this.roomKey) {
       this.roomKey = key;
       this.renderRoom();
@@ -992,7 +1094,7 @@ export class CatScene {
     const wh = Math.round((fy - lh * 0.1) * 0.58); // the window scales with the wall height
     const wx = Math.round(lw * 0.3 - ww / 2);
     const wy = Math.round(lh * 0.1);
-    this.geo = { win: { x: wx, y: wy, w: ww, h: wh }, stars: [], bulbs: [], screen: null, mug: null, antenna: null, desk: null, clock: null, record: null };
+    this.geo = { win: { x: wx, y: wy, w: ww, h: wh }, stars: [], bulbs: [], screen: null, mug: null, antenna: null, desk: null, deskSpot: null, shelf: null, candles: null, neon: null, lava: null };
 
     // dithered gradients for wall, sky and floor, written straight into pixels
     const ramp = (a: string, b: string, n: number) => Array.from({ length: n }, (_, i) => mixRGB(rgb(a), rgb(b), i / (n - 1)));
@@ -1199,6 +1301,7 @@ export class CatScene {
         px(r, vx, shy - 7 + (k < 3 ? -k : k - 4), vine[(k + v) % 3]!, k % 3 === 0 ? 2 : 1, 1);
       }
     }
+    this.geo.shelf = { x: shx, y: shy, w: shw };
     px(r, shx - 1, shy, OUTLINE, shw + 2, 4);
     px(r, shx, shy, '#7a5650', shw, 1);
     px(r, shx, shy + 1, '#5a3d3a', shw, 2);
@@ -1283,7 +1386,8 @@ export class CatScene {
       this.geo.mug = { x: gx + 1, y: top - 7 };
     }
     const kx = dx + 57;
-    if (kx + 12 < dx + dw) {
+    this.geo.deskSpot = kx + 12 < dx + dw ? { x: kx + 5, y: top } : null;
+    if (kx + 12 < dx + dw && !this.outfit.decor.includes('decor.lava')) {
       const cols = ['#5b7fd1', '#b5576a', '#e0b25a'];
       cols.forEach((col, i) => {
         px(r, kx - 1 + i, top - 3 - i * 3, OUTLINE, 13, 4);
@@ -1292,27 +1396,39 @@ export class CatScene {
     }
   }
 
-  /** Decor is additive: every placed item has its own spot. */
+  /** Decor is additive: every placed item has its own spot, in its chosen colour. */
   private renderDecor(r: Ctx): void {
     const has = (id: string) => this.outfit.decor.includes(id);
+    const col = (id: string) => variantOf(id, this.outfit.tints)?.color ?? '#8a8496';
     const th = this.look.theme;
     const floor = this.floorY + 4;
-    if (has('decor.rug')) drawRug(r, this.homeX + 4, this.footY + 2, 34, th.accent);
-    if (has('decor.books')) drawBooks(r, Math.max(9, this.homeX - 88), floor);
-    if (has('decor.plant')) drawPlant(r, Math.max(10, this.homeX - 66), floor);
-    if (has('decor.lamp')) drawFloorLamp(r, Math.max(10, this.homeX - 44), floor, Math.round(this.lh * 0.42), th.glow);
+    if (has('decor.rug')) drawRug(r, this.homeX + 4, this.footY + 2, 34, col('decor.rug'));
+    if (has('decor.beanbag')) drawBeanbag(r, Math.max(12, this.homeX - 88), floor, col('decor.beanbag'));
+    if (has('decor.guitar')) drawGuitar(r, Math.max(8, this.homeX - 68), floor, col('decor.guitar'));
+    if (has('decor.lamp')) drawFloorLamp(r, Math.max(10, this.homeX - 44), floor, Math.round(this.lh * 0.42), th.glow, true, col('decor.lamp'));
     if (has('decor.bed')) {
       const d = this.geo.desk;
-      drawBed(r, d ? d.x + 16 : this.homeX + 50, floor);
+      drawBed(r, d ? d.x + 16 : this.homeX + 50, floor, col('decor.bed'));
     }
-    if (has('decor.record')) {
+    if (has('decor.candles')) {
       const w = this.geo.win;
-      this.geo.record = { x: w.x + w.w - 16, y: w.y + w.h + 1 };
-      drawRecord(r, this.geo.record.x, this.geo.record.y);
+      this.geo.candles = { x: w.x + w.w - 12, y: w.y + w.h + 1 };
+      drawCandles(r, this.geo.candles.x, this.geo.candles.y);
     }
-    if (has('decor.clock')) {
-      this.geo.clock = { x: Math.round(this.lw * 0.69), y: Math.round(this.lh * 0.15) };
-      drawClock(r, this.geo.clock.x, this.geo.clock.y);
+    if (has('decor.poster') && this.geo.shelf) {
+      const v = variantOf('decor.poster', this.outfit.tints);
+      drawPoster(r, this.geo.shelf.x + 12, this.geo.shelf.y + 9, v?.id ?? 'cat', v?.color ?? '#f2a65a');
+    }
+    if (has('decor.neon')) {
+      this.geo.neon = { x: Math.round(this.lw * 0.68), y: Math.round(this.lh * 0.15), color: col('decor.neon') };
+      drawNeon(r, this.geo.neon.x, this.geo.neon.y, this.geo.neon.color);
+    }
+    if (has('decor.lava')) {
+      // on the desk when there's room, otherwise on the windowsill
+      const w = this.geo.win;
+      const spot = this.geo.deskSpot ?? { x: w.x + 22, y: w.y + w.h + 1 };
+      this.geo.lava = { x: spot.x, y: spot.y, color: col('decor.lava') };
+      drawLava(r, this.geo.lava.x, this.geo.lava.y, this.geo.lava.color);
     }
   }
 
@@ -1376,19 +1492,28 @@ export class CatScene {
       }
     }
 
-    // the wall clock shows the real time; the record spins
-    if (g.clock) {
-      const now = new Date();
-      const hand = (frac: number, len: number, col: string) => {
-        const a = frac * Math.PI * 2;
-        for (let k = 1; k <= len; k++) px(b, g.clock!.x + Math.round(Math.sin(a) * k), g.clock!.y - Math.round(Math.cos(a) * k), col);
-      };
-      hand(((now.getHours() % 12) + now.getMinutes() / 60) / 12, 2, OUTLINE);
-      hand(now.getMinutes() / 60, 4, '#5a4f94');
+    // candle flames flicker, the neon hums, the lava lamp's blobs drift
+    if (g.candles) {
+      for (const [dx, dy] of [[1, -9], [6, -7]] as const) {
+        const f = hash(Math.floor(t * 12) + dx) > 0.5 ? 1 : 0;
+        b.globalAlpha = 0.18;
+        ellipse(b, g.candles.x + dx, g.candles.y + dy, 3, 3, '#ffcf6b');
+        b.globalAlpha = 1;
+        px(b, g.candles.x + dx, g.candles.y + dy - f, '#ffcf6b', 1, 2);
+        px(b, g.candles.x + dx, g.candles.y + dy + 1, '#ff8a3d');
+      }
     }
-    if (g.record) {
-      const a = t * 5;
-      px(b, g.record.x + 5 + Math.round(Math.cos(a) * 3), g.record.y - 5, '#5a4f94');
+    if (g.neon && hash(Math.floor(t * 8)) > 0.97) {
+      b.globalAlpha = 0.6;
+      ellipse(b, g.neon.x, g.neon.y, 9, 9, this.look.theme.wallDark);
+      b.globalAlpha = 1;
+    }
+    if (g.lava) {
+      for (let k = 0; k < 2; k++) {
+        const ph = (t * 0.25 + k * 0.5) % 1;
+        const y = g.lava.y - 4 - Math.round(Math.sin(ph * Math.PI) * 6);
+        px(b, g.lava.x - 1 + k, y, g.lava.color, 2, 2);
+      }
     }
 
     if (g.mug) {
@@ -1483,7 +1608,7 @@ export class CatScene {
  * A small pixel-art preview of a shop item, as a canvas scaled up with CSS.
  * Hats, collars and fur show the cat's head wearing the item.
  */
-export function itemIcon(id: string, furId = 'fur.orange'): HTMLCanvasElement {
+export function itemIcon(id: string, furId = 'fur.orange', tints: Record<string, string> = {}): HTMLCanvasElement {
   const cv = document.createElement('canvas');
   cv.className = 'icon-canvas';
   const c = cv.getContext('2d')!;
@@ -1540,22 +1665,22 @@ export function itemIcon(id: string, furId = 'fur.orange'): HTMLCanvasElement {
     px(c, 0, 28, th.floorDark, 32, 1);
     px(c, 22, 12, th.accent, 5, 3);
     px(c, 24, 15, OUTLINE, 1, 8);
-  } else if (id === 'decor.rug') {
-    drawRug(c, 16, 20, 11, DEFAULT_THEME.accent);
-  } else if (id === 'decor.plant') {
-    drawPlant(c, 16, 30);
-  } else if (id === 'decor.lamp') {
-    drawFloorLamp(c, 16, 31, 28, DEFAULT_THEME.glow, false);
-  } else if (id === 'decor.bed') {
-    drawBed(c, 16, 22);
-  } else if (id === 'decor.books') {
-    drawBooks(c, 16, 26);
-  } else if (id === 'decor.record') {
-    drawRecord(c, 10, 20);
-  } else if (id === 'decor.clock') {
-    drawClock(c, 16, 16);
-    px(c, 16, 13, OUTLINE, 1, 3);
-    px(c, 17, 16, '#5a4f94', 3, 1);
+  } else if (cat === 'decor') {
+    const v = variantOf(id, tints);
+    const col = v?.color ?? '#8a8496';
+    if (id === 'decor.rug') drawRug(c, 16, 20, 11, col);
+    else if (id === 'decor.lamp') drawFloorLamp(c, 16, 31, 28, DEFAULT_THEME.glow, false, col);
+    else if (id === 'decor.bed') drawBed(c, 16, 22, col);
+    else if (id === 'decor.beanbag') drawBeanbag(c, 16, 26, col);
+    else if (id === 'decor.guitar') drawGuitar(c, 14, 31, col);
+    else if (id === 'decor.candles') drawCandles(c, 12, 24);
+    else if (id === 'decor.poster') drawPoster(c, 9, 8, v?.id ?? 'cat', col);
+    else if (id === 'decor.neon') drawNeon(c, 15, 16, col, false);
+    else if (id === 'decor.lava') {
+      drawLava(c, 16, 26, col);
+      px(c, 15, 18, col, 2, 2);
+      px(c, 16, 21, col, 2, 2);
+    }
   }
   return cv;
 }

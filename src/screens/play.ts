@@ -6,6 +6,7 @@ import { nextLevel, type LevelDef, type SectionDef } from '../data/sections.js';
 import { audio } from '../audio/engine.js';
 import { MusicDirector } from '../audio/music.js';
 import { sfx } from '../audio/sfx.js';
+import { catVoice } from '../audio/catVoice.js';
 import { COUNT_IN_BEATS, GameSession, HEARTS, type LevelResult } from '../game/session.js';
 import { TimingSlider } from '../render/slider.js';
 import { KeyboardGuide } from './keyboard.js';
@@ -144,9 +145,9 @@ export class PlayScreen implements Screen {
     // with the keyboard showing, the holographic hands do the explaining: no text line
     const hintText = this.keyboard ? '' : this.level.tip && !cleared ? this.level.tip : first ? rhythmHint : '';
     const hint = hintText ? h('div', { class: 'type-hint', text: hintText }) : null;
-    this.nav.scene.floorFrac = this.keyboard ? 0.5 : 0.6;
+    this.nav.scene.floorFrac = 0.6;
 
-    this.panel = h('div', { class: 'typing panel' }, this.slider.el, this.curLine, this.nextLine, this.laterLine, hint, this.keyboard?.el);
+    this.panel = h('div', { class: 'typing panel' }, this.slider.el, this.curLine, this.nextLine, this.laterLine, hint);
     root.append(
       h(
         'div',
@@ -160,6 +161,8 @@ export class PlayScreen implements Screen {
         ),
         h('div', { class: 'combo' }, this.comboEl, h('div', { class: 'combo-label', text: 'combo' }), this.multEl),
         h('div', { class: 'center' }, this.banner, this.feedback, this.panel),
+        // the keyboard guide floats at the side of the room, so it never hides the cat
+        this.keyboard ? h('div', { class: 'kb-dock panel' }, this.keyboard.el) : null,
       ),
     );
   }
@@ -217,10 +220,12 @@ export class PlayScreen implements Screen {
         void this.comboEl.offsetWidth; // restart animation
         this.comboEl.classList.add('bump');
         scene.combo = combo;
+        catVoice.combo(combo);
       }),
       s.on('miss', ({ hearts }) => {
         this.hearts.forEach((el, i) => el.classList.toggle('lost', i >= hearts));
         scene.heartsFrac = Math.max(0, hearts / HEARTS);
+        catVoice.miss();
         scene.recovering = true;
         scene.miss();
         this.panel.classList.remove('shake');

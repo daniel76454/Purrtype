@@ -2,7 +2,7 @@ import { h } from '../core/dom.js';
 import type { Navigator, Screen } from '../core/screens.js';
 import { store } from '../core/storage.js';
 import { CATEGORIES, type Category, type Outfit } from '../core/types.js';
-import { CATEGORY_LABELS, itemsIn, type ShopItem } from '../data/shop.js';
+import { CATEGORY_LABELS, itemsIn, variantOf, type ShopItem } from '../data/shop.js';
 import { sfx } from '../audio/sfx.js';
 import { header, icon } from './ui.js';
 import { itemIcon } from '../render/cat.js';
@@ -57,12 +57,13 @@ export class ShopScreen implements Screen {
   /** Show what's actually equipped (copying the decor list so previews can't change the save). */
   private applyEquipped(): void {
     const e = store.data.equipped;
-    this.nav.scene.outfit = { ...e, decor: [...e.decor] };
+    this.nav.scene.outfit = { ...e, decor: [...e.decor], tints: { ...e.tints } };
   }
 
   private render(): void {
     this.body.replaceChildren();
-    for (const item of itemsIn(this.tab)) this.body.append(this.card(item));
+    // secret items only show up once they're yours
+    for (const item of itemsIn(this.tab)) if (!item.secret || store.data.owned.includes(item.id)) this.body.append(this.card(item));
   }
 
   /** Is this item in use: worn, or (for decor) placed in the room? */
@@ -122,7 +123,7 @@ export class ShopScreen implements Screen {
         on: {
           click: () => {
             // preview: try it on (or, for decor, see the room with it toggled)
-            const preview = { ...store.data.equipped, decor: [...store.data.equipped.decor] };
+            const preview = { ...store.data.equipped, decor: [...store.data.equipped.decor], tints: { ...this.nav.scene.outfit.tints } };
             if (!(decor ? false : inUse)) this.use(item, preview);
             this.nav.scene.outfit = preview;
             sfx.click();
@@ -130,9 +131,37 @@ export class ShopScreen implements Screen {
           },
         },
       },
-      h('div', { class: 'swatch' }, itemIcon(item.id, this.nav.scene.outfit.fur)),
+      h('div', { class: 'swatch' }, itemIcon(item.id, this.nav.scene.outfit.fur, this.nav.scene.outfit.tints)),
       h('div', { class: 'name', text: item.name }),
+      this.variantPicker(item, owned),
       action,
+    );
+  }
+
+  /** Colour/design dots for decor. Free to change once owned; before that they just preview. */
+  private variantPicker(item: ShopItem, owned: boolean): HTMLElement | null {
+    if (!item.variants) return null;
+    const current = variantOf(item.id, this.nav.scene.outfit.tints)?.id;
+    return h(
+      'div',
+      { class: 'variants' },
+      ...item.variants.map((v) =>
+        h('button', {
+          class: `variant ${v.id === current ? 'on' : ''}`,
+          attrs: { title: v.name, 'aria-label': v.name, style: `background:${v.color}` },
+          on: {
+            click: (e: Event) => {
+              e.stopPropagation();
+              sfx.click();
+              if (owned) store.update((s) => (s.equipped.tints = { ...s.equipped.tints, [item.id]: v.id }));
+              const o = this.nav.scene.outfit;
+              const decor = o.decor.includes(item.id) ? o.decor : [...o.decor, item.id];
+              this.nav.scene.outfit = { ...o, decor, tints: { ...o.tints, [item.id]: v.id } };
+              this.render();
+            },
+          },
+        }),
+      ),
     );
   }
 }

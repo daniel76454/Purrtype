@@ -1,8 +1,8 @@
 import { QUOTES } from '../data/quotes.js';
 
 /**
- * Practice mode (pure): free typing with no rhythm and no hearts, like a typing race (~80 words
- * of famous public-domain quotes, or a cozy story).
+ * Practice mode (pure): free typing with no rhythm and no hearts, like a typing race: one famous
+ * public-domain passage (fantasy, sci-fi and classics), or a ~80-word cozy story.
  *
  *  - Mistakes must be fixed with Backspace before you can move on (Ctrl+Backspace deletes a word).
  *  - A word typed with no mistakes adds to the combo; the first mistake in a word resets it.
@@ -124,16 +124,16 @@ export interface PracticeText {
   sources: string[];
 }
 
-/** A practice text: usually a handful of famous public-domain quotes, sometimes a cozy story. */
+/** Shortest passage worth a practice run. */
+export const MIN_PASSAGE_WORDS = 25;
+
+/** A practice text: usually one famous public-domain passage (it ends where it ends), sometimes a cozy story. */
 export function practiceText(seed: number, words = 80): PracticeText {
   const rnd = mulberry32(seed);
-  if (rnd() < 0.3) return { kind: 'story', lines: generatePractice(seed + 1, words), sources: [] };
-  const chosen = pick(QUOTES, (q) => wordCount(q.text), rnd, words, words + 15);
-  return {
-    kind: 'quotes',
-    lines: wrap(chosen.map((q) => q.text).join(' ').split(' ')),
-    sources: chosen.map((q) => q.source),
-  };
+  const passages = QUOTES.filter((q) => wordCount(q.text) >= MIN_PASSAGE_WORDS);
+  if (rnd() < 0.25 || !passages.length) return { kind: 'story', lines: generatePractice(seed + 1, words), sources: [] };
+  const q = passages[Math.floor(rnd() * passages.length)]!;
+  return { kind: 'quotes', lines: wrap(q.text.split(' ')), sources: [q.source] };
 }
 
 // ---- scoring ---------------------------------------------------------------------------

@@ -253,8 +253,19 @@ test('saves: old single-decor saves become a decor list; merging keeps only owne
 
   const base = defaultSave();
   const local = { ...base, updatedAt: 1, owned: [...base.owned, 'decor.rug'] };
-  const remote = { ...base, updatedAt: 2, owned: [...base.owned, 'decor.plant'], equipped: { ...base.equipped, decor: ['decor.plant', 'decor.lamp'] } };
-  assert.deepEqual(mergeSaves(local, remote).equipped.decor, ['decor.plant'], 'unowned decor is dropped');
+  const remote = { ...base, updatedAt: 2, pets: 7, owned: [...base.owned, 'decor.bed'], equipped: { ...base.equipped, decor: ['decor.bed', 'decor.lamp'], tints: { 'decor.bed': 'gray' } } };
+  const m = mergeSaves({ ...local, pets: 3 }, remote);
+  assert.deepEqual(m.equipped.decor, ['decor.bed'], 'unowned decor is dropped');
+  assert.equal(m.equipped.tints['decor.bed'], 'gray');
+  assert.equal(m.pets, 7, 'pets add up across devices as the highest count');
+});
+
+test('saves: retired decor is refunded and removed', () => {
+  const s = normalizeSave({ yarn: 10, owned: ['decor.plant', 'decor.record', 'decor.rug'], equipped: { decor: ['decor.plant', 'decor.rug'] } });
+  assert.equal(s.yarn, 10 + 250 + 300);
+  assert.ok(!s.owned.includes('decor.plant') && !s.owned.includes('decor.record'));
+  assert.deepEqual(s.equipped.decor, ['decor.rug']);
+  assert.equal(normalizeSave(s).yarn, s.yarn, 'refunds happen only once');
 });
 
 // ---- practice mode ------------------------------------------------------------------------
@@ -266,19 +277,24 @@ test('practice: generated text is about 80 words in short lines', () => {
   assert.deepEqual(generatePractice(42), lines, 'same seed, same text');
 });
 
-test('practice: quote texts are ~80 words of whole quotes, all typeable ASCII', () => {
-  for (const q of QUOTES) assert.match(q.text, /^[ -~]+$/, q.text);
-  let quotes = 0;
+test('practice: one whole passage per text (25+ words, one source), all typeable ASCII', () => {
+  for (const q of QUOTES) {
+    assert.match(q.text, /^[ -~]+$/, q.text);
+    assert.ok(q.text.split(' ').length >= 25, `too short: ${q.source}`);
+  }
+  let passages = 0;
   for (let seed = 1; seed <= 30; seed++) {
     const t = practiceText(seed);
-    const words = t.lines.join(' ').split(' ').length;
-    assert.ok(words >= 75 && words <= 95, `${words} words`);
     if (t.kind === 'quotes') {
-      quotes++;
-      assert.ok(t.sources.length > 0);
+      passages++;
+      assert.equal(t.sources.length, 1);
+      assert.ok(QUOTES.some((q) => q.text === t.lines.join(' ')), 'the passage is used whole');
+    } else {
+      const words = t.lines.join(' ').split(' ').length;
+      assert.ok(words >= 75 && words <= 95, `${words} words`);
     }
   }
-  assert.ok(quotes > 10, 'mostly quotes');
+  assert.ok(passages > 15, 'mostly passages');
 });
 
 test('practice: mistakes block progress until fixed with backspace', () => {
