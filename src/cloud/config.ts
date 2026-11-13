@@ -17,7 +17,14 @@ export interface FirebaseConfig {
   messagingSenderId?: string;
 }
 
-export const FIREBASE_CONFIG: FirebaseConfig | null = null;
+export const FIREBASE_CONFIG: FirebaseConfig | null = {
+  apiKey: 'AIzaSyAgWsjqk6tQWuJLf26ILZqkahMYTuzFuSI',
+  authDomain: 'purrtype-669f7.firebaseapp.com',
+  projectId: 'purrtype-669f7',
+  storageBucket: 'purrtype-669f7.firebasestorage.app',
+  messagingSenderId: '664274781250',
+  appId: '1:664274781250:web:bd7c7a8c57ff8c2f2b19db',
+};
 
 /** Firebase JS SDK version loaded from Google's CDN (no bundler needed). */
 export const FIREBASE_SDK = '10.12.2';
